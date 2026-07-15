@@ -11,6 +11,9 @@ DROP TABLE IF EXISTS mails CASCADE;
 DROP TABLE IF EXISTS clips CASCADE;
 DROP TABLE IF EXISTS stations CASCADE;
 DROP TABLE IF EXISTS quiz_questions CASCADE;
+DROP TABLE IF EXISTS materials CASCADE;
+DROP TABLE IF EXISTS osint_tasks CASCADE;
+DROP TABLE IF EXISTS teaching_slides CASCADE;
 
 -- 2. CREATE STATE & USERS TABLES
 CREATE TABLE teams (
@@ -40,11 +43,6 @@ CREATE TABLE session_state (
     active_tab TEXT DEFAULT 'mod1',
     gandalf_level INT DEFAULT 0
 );
-
--- Enable Realtime for answers, teams, and session_state
--- alter publication supabase_realtime add table answers;
--- alter publication supabase_realtime add table teams;
--- alter publication supabase_realtime add table session_state;
 
 -- 3. CREATE DYNAMIC CONTENT TABLES
 CREATE TABLE schedule (
@@ -83,6 +81,7 @@ CREATE TABLE clips (
 CREATE TABLE stations (
     id INT PRIMARY KEY,
     name TEXT NOT NULL,
+    url TEXT,
     is_active BOOLEAN DEFAULT false
 );
 
@@ -94,15 +93,84 @@ CREATE TABLE quiz_questions (
     answered BOOLEAN DEFAULT false
 );
 
--- Enable Realtime for dynamic content updates during session
--- alter publication supabase_realtime add table board_items;
--- alter publication supabase_realtime add table mails;
--- alter publication supabase_realtime add table clips;
--- alter publication supabase_realtime add table stations;
--- alter publication supabase_realtime add table quiz_questions;
+CREATE TABLE materials (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    type TEXT NOT NULL, -- 'pdf', 'link', 'roadmap'
+    url TEXT NOT NULL,
+    is_unlocked BOOLEAN DEFAULT false
+);
 
+CREATE TABLE osint_tasks (
+    id INT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    hint TEXT NOT NULL,
+    correct TEXT NOT NULL,
+    pts INT DEFAULT 3,
+    is_active BOOLEAN DEFAULT false
+);
 
--- 4. INSERT INITIAL DATA (Removing Mock Data from Code)
+CREATE TABLE teaching_slides (
+    id INT PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT false
+);
+
+-- Auto Grading Trigger
+CREATE OR REPLACE FUNCTION grade_answer() RETURNS TRIGGER AS $$
+DECLARE
+    is_correct BOOLEAN := false;
+    pts INT := 0;
+    actual_ans TEXT;
+    q_ans INT;
+BEGIN
+    IF NEW.module = 'mod1' THEN
+        SELECT correct INTO actual_ans FROM board_items WHERE id = NEW.question_id::int;
+        IF actual_ans = NEW.answer THEN
+            is_correct := true;
+            pts := 2;
+        END IF;
+    ELSIF NEW.module = 'lab1' THEN
+        SELECT correct INTO actual_ans FROM mails WHERE label = NEW.question_id AND team_id = NEW.team_id;
+        IF actual_ans = NEW.answer THEN
+            is_correct := true;
+            pts := 2;
+        END IF;
+    ELSIF NEW.module = 'lab3' THEN
+        SELECT correct INTO actual_ans FROM clips WHERE label = NEW.question_id;
+        IF actual_ans = NEW.answer THEN
+            is_correct := true;
+            pts := 2;
+        END IF;
+    ELSIF NEW.module = 'lab5' THEN
+        SELECT correct INTO actual_ans FROM osint_tasks WHERE id = NEW.question_id::int;
+        IF lower(trim(actual_ans)) = lower(trim(NEW.answer)) THEN
+            is_correct := true;
+            pts := 3;
+        END IF;
+    ELSIF NEW.module = 'quiz' THEN
+        SELECT answer INTO q_ans FROM quiz_questions WHERE id = replace(NEW.question_id, 'Q', '')::int;
+        IF q_ans::text = NEW.answer THEN
+            is_correct := true;
+            pts := 1;
+        END IF;
+    END IF;
+
+    IF is_correct THEN
+        UPDATE teams SET score = score + pts WHERE id = NEW.team_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_grade_answer
+AFTER INSERT ON answers
+FOR EACH ROW EXECUTE FUNCTION grade_answer();
+
+-- 4. INSERT INITIAL DATA
 
 -- Teams
 INSERT INTO teams (id, name, score) VALUES 
@@ -122,6 +190,7 @@ INSERT INTO schedule (id, title, time_str, start_sec) VALUES
 ('lab2', 'Lab 2 - Prompt Injection', '1:25', 5100),
 ('lab3', 'Lab 3 - Deepfake Detection', '2:00', 7200),
 ('lab4', 'Lab 4 - Defensive Tools', '2:30', 9000),
+('lab5', 'Lab 5 - OSINT Challenge', '2:40', 9600),
 ('quiz', 'Quiz & wrap-up', '2:50', 10200);
 
 -- Board Items
@@ -135,7 +204,7 @@ INSERT INTO board_items (id, text, correct, status) VALUES
 (7, 'SOC analyst copilots', 'D', 'unsorted'),
 (8, 'Behavioral login detection', 'D', 'unsorted');
 
--- Mails (Team 0 = Facilitator Samples, Teams 1-12 = Unique student sets)
+-- Mails
 INSERT INTO mails (id, team_id, label, sender, body, correct, answered) VALUES 
 (1, 0, 'S1', 'IT-Support@techk-nots.com', 'Urgent: Your account will be suspended in 2 hours. Verify your credentials immediately using the secure link below to avoid interruption.', 'PHISHING', false),
 (2, 0, 'S2', 'placements@techknots.in', 'Hi all, attaching the confirmed schedule for next week''s VAC sessions. Let me know if your slot needs to move. No links, no attachments needed to open right away.', 'GENUINE', false),
@@ -182,12 +251,15 @@ INSERT INTO clips (id, label, title, correct, explanation, answered) VALUES
 (1, 'Clip 1', 'CEO Quarterly Update Announcement', 'FAKE', 'Unnatural blinking pattern and audio artifact at 0:04.', false),
 (2, 'Clip 2', 'Security Conference Keynote', 'REAL', 'Genuine footage from last year''s summit.', false);
 
--- Stations
-INSERT INTO stations (id, name, is_active) VALUES 
-(0, 'Have I Been Pwned', false),
-(1, 'VirusTotal', false),
-(2, 'Google Safe Browsing', false),
-(3, 'Windows Defender', false);
+-- Stations (Added more jaw-dropping free tools)
+INSERT INTO stations (id, name, url, is_active) VALUES 
+(0, 'Have I Been Pwned', 'https://haveibeenpwned.com/', false),
+(1, 'VirusTotal', 'https://www.virustotal.com/', false),
+(2, 'Shodan (IoT Search Engine)', 'https://www.shodan.io/', false),
+(3, 'CyberChef (The Cyber Swiss Army Knife)', 'https://gchq.github.io/CyberChef/', false),
+(4, 'Any.Run (Interactive Malware Analysis)', 'https://any.run/', false),
+(5, 'OSINT Framework', 'https://osintframework.com/', false),
+(6, 'Kasm Workspaces (Browser Isolation)', 'https://kasmweb.com/', false);
 
 -- Quiz
 INSERT INTO quiz_questions (id, text, options, answer, answered) VALUES 
@@ -197,6 +269,25 @@ INSERT INTO quiz_questions (id, text, options, answer, answered) VALUES
 (4, 'AI is most effective for defenders in:', '["Writing malware", "Pattern recognition at scale", "Social engineering", "Physical security"]', 1, false),
 (5, 'The goal of Gandalf was to:', '["Guess the password", "Bypass the LLM guardrails", "Detect deepfakes", "Sort attack vs defense"]', 1, false),
 (6, 'Which domain is a typo-squatting example?', '["google.com", "microsoft.com", "paypa1.com", "techknots.in"]', 2, false);
+
+-- Materials
+INSERT INTO materials (title, type, url, is_unlocked) VALUES
+('Defensive Tool Arsenal Guide', 'pdf', '#', false),
+('Incident Response Playbook', 'pdf', '#', false),
+('Cybersecurity Career Roadmap', 'roadmap', '#', false);
+
+-- OSINT Tasks
+INSERT INTO osint_tasks (id, title, description, hint, correct, pts, is_active) VALUES
+(1, 'Identify the Hacker''s Handle', 'Find the alias used by the author of the suspicious repository "ShadowStrike".', 'Check the commit history or author email domain.', 'cyber_phantom_99', 3, false),
+(2, 'Locate the Stolen Data Server', 'An IP address was found in a pastebin dump: 198.51.100.42. Find its physical location city.', 'Use an IP Geolocation tool.', 'New York', 3, false);
+
+-- Teaching Slides
+INSERT INTO teaching_slides (id, title, content, is_active) VALUES
+(1, 'Welcome to Cybersecurity with AI', 'Today we will explore how AI is used by both attackers and defenders. We will look at phishing, deepfakes, prompt injection, and defensive automation.', false),
+(2, 'The Evolution of Phishing', 'Attackers use Large Language Models (LLMs) to generate highly convincing, personalized phishing emails at scale without spelling errors.', false),
+(3, 'Prompt Injection Explained', 'Prompt injection is when a user maliciously alters the inputs to an LLM to override its original instructions and bypass safety filters.', false),
+(4, 'Spotting Deepfakes', 'Look for unnatural blinking, mismatched lip-syncing, strange lighting artifacts, and robotic-sounding voice inflections.', false),
+(5, 'Defensive Tools Landscape', 'Modern defenders rely on tools like Shodan, VirusTotal, and CyberChef to analyze threats and gather intelligence safely.', false);
 
 -- Disable RLS to allow public frontend access without auth
 ALTER TABLE teams DISABLE ROW LEVEL SECURITY;
@@ -209,3 +300,7 @@ ALTER TABLE mails DISABLE ROW LEVEL SECURITY;
 ALTER TABLE clips DISABLE ROW LEVEL SECURITY;
 ALTER TABLE stations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE quiz_questions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE materials DISABLE ROW LEVEL SECURITY;
+ALTER TABLE osint_tasks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE teaching_slides DISABLE ROW LEVEL SECURITY;
+

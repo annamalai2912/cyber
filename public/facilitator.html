@@ -97,7 +97,6 @@
         .quiz-btn { text-align: left; padding: 0.75rem 1rem; background: white; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-family: var(--font-body); transition: background 0.2s; }
         .quiz-btn.correct { background: #d5e0ca; border-color: #8b9c7a; }
         .quiz-btn.incorrect { background: #e0caca; border-color: #9c7a7a; }
-    </style>
 </head>
 <body>
     <div class="app-container" id="app" style="display:none;">
@@ -141,6 +140,9 @@
             <div class="tab-content" id="tab-lab2"></div>
             <div class="tab-content" id="tab-lab3"></div>
             <div class="tab-content" id="tab-lab4"></div>
+            <div class="tab-content" id="tab-lab5"></div>
+            <div class="tab-content" id="tab-teaching"></div>
+            <div class="tab-content" id="tab-materials"></div>
             <div class="tab-content" id="tab-quiz"></div>
         </div>
     </div>
@@ -172,7 +174,7 @@
         let gandalfLevel = 0;
 
         let db = {
-            teams: [], schedule: [], board_items: [], mails: [], clips: [], stations: [], quiz: []
+            teams: [], schedule: [], board_items: [], mails: [], clips: [], stations: [], quiz: [], osint_tasks: [], materials: [], teaching_slides: []
         };
         
         let bc = null; // Broadcast channel
@@ -190,6 +192,9 @@
                     supabaseClient.from('clips').select('*').order('id'),
                     supabaseClient.from('stations').select('*').order('id'),
                     supabaseClient.from('quiz_questions').select('*').order('id'),
+                    supabaseClient.from('osint_tasks').select('*').order('id'),
+                    supabaseClient.from('materials').select('*').order('id'),
+                    supabaseClient.from('teaching_slides').select('*').order('id'),
                     supabaseClient.from('session_state').select('*').maybeSingle()
                 ]);
                 
@@ -205,8 +210,11 @@
                 db.clips = res[4].data || [];
                 db.stations = res[5].data || [];
                 db.quiz = res[6].data || [];
+                db.osint_tasks = res[7].data || [];
+                db.materials = res[8].data || [];
+                db.teaching_slides = res[9].data || [];
                 
-                const state = res[7].data || { timer_secs: 0, is_running: false, active_tab: 'mod1' };
+                const state = res[10].data || { timer_secs: 0, is_running: false, active_tab: 'mod1' };
                 
                 // Recover timer from local storage if it's more recent
                 const localTime = parseInt(localStorage.getItem('timerSecs'));
@@ -239,9 +247,8 @@
                 // Not strictly needed for facilitator as they are the master, but good for multi-facilitator
             }).subscribe();
             
-            // Postgres Changes for Auto Grading
+            // Postgres Changes for UI Updates (Scoring is now handled by Database Triggers)
             supabaseClient.channel('db-changes')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'answers' }, handleStudentAnswer)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, payload => {
                     const idx = db.teams.findIndex(t => t.id === payload.new.id);
                     if(idx > -1) db.teams[idx] = payload.new;
@@ -273,39 +280,27 @@
                     if(idx > -1) db.quiz[idx] = payload.new;
                     renderQuiz();
                 })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'osint_tasks' }, payload => {
+                    const idx = db.osint_tasks.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.osint_tasks[idx] = payload.new;
+                    renderLab5();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'materials' }, payload => {
+                    const idx = db.materials.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.materials[idx] = payload.new;
+                    renderMaterials();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teaching_slides' }, payload => {
+                    const idx = db.teaching_slides.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.teaching_slides[idx] = payload.new;
+                    renderTeaching();
+                })
                 .subscribe();
                 
             // Ensure timer starts if it was running
             if(state.is_running) toggleTimer(true);
         }
 
-        async function handleStudentAnswer(payload) {
-            const ans = payload.new; // {team_id, module, question_id, answer}
-            
-            // Auto grade
-            let correct = false;
-            let pts = 0;
-            
-            if(ans.module === 'lab1') {
-                const m = db.mails.find(x => x.label === ans.question_id && x.team_id === ans.team_id);
-                if(m && m.correct === ans.answer) { correct = true; pts = 2; }
-            } else if (ans.module === 'lab3') {
-                const c = db.clips.find(x => x.label === ans.question_id);
-                if(c && c.correct === ans.answer) { correct = true; pts = 2; }
-            } else if (ans.module === 'quiz') {
-                const q = db.quiz.find(x => `Q${x.id}` === ans.question_id);
-                if(q && q.answer.toString() === ans.answer) { correct = true; pts = 1; }
-            }
-            
-            if(correct) {
-                // Award points via RPC or UPDATE
-                const team = db.teams.find(t => t.id === ans.team_id);
-                await supabaseClient.from('teams').update({ score: team.score + pts }).eq('id', ans.team_id);
-                showToast(`Team ${ans.team_id} answered correctly! (+${pts} pts)`);
-            } else {
-                showToast(`Team ${ans.team_id} submitted an incorrect answer.`);
-            }
-        }
 
         function renderAll() {
             renderTabsNav();
@@ -317,6 +312,9 @@
             renderLab2();
             renderDeepfakes();
             renderStations();
+            renderLab5();
+            renderTeaching();
+            renderMaterials();
             renderQuiz();
             
             // Switch to active tab
@@ -325,8 +323,8 @@
         }
         
         function renderTabsNav() {
-            const tabs = ['mod1', 'lab1', 'lab2', 'lab3', 'lab4', 'quiz'];
-            const names = ['Mod 1', 'Lab 1', 'Lab 2', 'Lab 3', 'Lab 4', 'Quiz'];
+            const tabs = ['mod1', 'lab1', 'lab2', 'lab3', 'lab4', 'lab5', 'teaching', 'materials', 'quiz'];
+            const names = ['Mod 1', 'Lab 1', 'Lab 2', 'Lab 3', 'Lab 4', 'Lab 5', 'Teaching', 'Materials', 'Quiz'];
             document.getElementById('tabs-nav').innerHTML = tabs.map((t, i) => `
                 <button class="tab-btn" id="btn-tab-${t}" onclick="switchTab('${t}')">${names[i]}</button>
             `).join('');
@@ -343,9 +341,7 @@
         const TOTAL_SESSION_SECS = 3 * 3600; // 3 hours
 
         function updateClockDisplay() {
-            // Visual countdown from 3 hours
-            const remaining = Math.max(0, TOTAL_SESSION_SECS - timerSecs);
-            document.getElementById('clock-display').innerText = formatTime(remaining);
+            document.getElementById('clock-display').innerText = formatTime(timerSecs);
             updateTimelineHighlight();
         }
 
@@ -559,9 +555,6 @@
             const newStatus = item.correct === 'A' ? 'attack' : 'defense';
             
             await supabaseClient.from('board_items').update({ status: newStatus }).eq('id', id);
-            
-            if (isCorrect) awardPoints(2, 'Correct board sort');
-            else showToast(`Incorrect! It was ${item.correct === 'A' ? 'Attack' : 'Defense'}.`);
         }
 
         function renderPhishing() {
@@ -634,7 +627,7 @@
         function renderStations() {
             const cards = db.stations.map(s => `
                 <div class="card" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 1rem 1.5rem;">
-                    <span style="font-weight: 500;">${s.name}</span>
+                    <span style="font-weight: 500;">${s.name} ${s.url ? `<span style="color:var(--text-secondary); font-size:0.8rem; font-family:var(--font-mono); margin-left:0.5rem;">(${s.url})</span>` : ''}</span>
                     <button class="btn ${s.is_active ? 'btn-primary' : 'btn-outline'}" style="${!s.is_active ? 'background: white;' : ''}" onclick="toggleStation(${s.id})">${s.is_active ? 'REVOKE -1' : 'AWARD +1'}</button>
                 </div>
             `).join('');
@@ -647,6 +640,55 @@
             await supabaseClient.from('stations').update({ is_active: newState }).eq('id', id);
             if(newState) awardPoints(1, `Station: ${s.name}`);
             else awardPoints(-1, `Revoked: ${s.name}`);
+        }
+
+        function renderLab5() {
+            const cards = db.osint_tasks.map(t => `
+                <div class="card" style="flex-direction: column; padding: 1rem 1.5rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Task ${t.id}: ${t.title}</div>
+                    <div style="font-size: 0.9rem; margin-bottom: 1rem;">${t.description}</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; margin-bottom: 1rem;">Actual Answer: <span style="background:var(--border-color); padding:2px 4px; border-radius:4px;">${t.correct}</span></div>
+                    <button class="btn ${t.is_active ? 'btn-primary' : 'btn-outline'}" style="${!t.is_active ? 'background: white;' : ''}" onclick="toggleOSINT(${t.id})">${t.is_active ? 'LOCK TASK' : 'UNLOCK TASK'}</button>
+                </div>
+            `).join('');
+            document.getElementById('tab-lab5').innerHTML = `<div class="section-header"><div class="section-label">LAB 5</div><h2 class="section-title">OSINT Challenge</h2></div><div class="grid-2">${cards}</div>`;
+        }
+
+        async function toggleOSINT(id) {
+            const t = db.osint_tasks.find(x => x.id === id);
+            await supabaseClient.from('osint_tasks').update({ is_active: !t.is_active }).eq('id', id);
+        }
+
+        function renderTeaching() {
+            const cards = db.teaching_slides.map(s => `
+                <div class="card" style="flex-direction: column; padding: 1rem 1.5rem; ${s.is_active ? 'border-color: #d35400; background: #fff;' : ''}">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">${s.id}. ${s.title}</div>
+                    <div style="font-size: 0.9rem; margin-bottom: 1rem;">${s.content}</div>
+                    <button class="btn ${s.is_active ? 'btn-primary' : 'btn-outline'}" style="${!s.is_active ? 'background: white;' : ''}" onclick="toggleTeachingSlide(${s.id})">${s.is_active ? 'CURRENTLY PRESENTING' : 'SHOW TO STUDENTS'}</button>
+                </div>
+            `).join('');
+            document.getElementById('tab-teaching').innerHTML = `<div class="section-header"><div class="section-label">TEACHING</div><h2 class="section-title">Instructor Slides & Notes</h2></div><div class="grid-2">${cards}</div>`;
+        }
+
+        async function toggleTeachingSlide(id) {
+            // Deactivate all others first, then activate the target
+            await supabaseClient.from('teaching_slides').update({ is_active: false }).neq('id', 0);
+            await supabaseClient.from('teaching_slides').update({ is_active: true }).eq('id', id);
+        }
+
+        function renderMaterials() {
+            const cards = db.materials.map(m => `
+                <div class="card" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 1rem 1.5rem;">
+                    <span style="font-weight: 500;">${m.title} <span style="color:var(--text-secondary); font-size:0.8rem;">(${m.type.toUpperCase()})</span></span>
+                    <button class="btn ${m.is_unlocked ? 'btn-primary' : 'btn-outline'}" style="${!m.is_unlocked ? 'background: white;' : ''}" onclick="toggleMaterial(${m.id})">${m.is_unlocked ? 'LOCK' : 'UNLOCK'}</button>
+                </div>
+            `).join('');
+            document.getElementById('tab-materials').innerHTML = `<div class="section-header"><div class="section-label">MATERIALS</div><h2 class="section-title">PDFs & Roadmap</h2></div><div class="grid-2">${cards}</div>`;
+        }
+
+        async function toggleMaterial(id) {
+            const m = db.materials.find(x => x.id === id);
+            await supabaseClient.from('materials').update({ is_unlocked: !m.is_unlocked }).eq('id', id);
         }
 
         function renderQuiz() {

@@ -60,8 +60,14 @@
         <!-- Dashboard Screen -->
         <div id="dashboard-screen" class="screen">
             <div id="status-bar">
-                <span id="my-team-label">Team X</span>
-                <span id="score-label" style="background:#fff; color:#000; padding:0 6px; border-radius:4px; font-weight:bold;">0 pts</span>
+                <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                    <span id="my-team-label">Team X</span>
+                    <span id="badge-label" style="font-size: 0.7rem; color: #d35400;">Novice</span>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <button class="btn" style="margin:0; padding: 0.4rem 0.8rem; font-size:0.7rem; border-color:var(--text-secondary);" onclick="downloadNotes()">DOWNLOAD NOTES</button>
+                    <span id="score-label" style="background:#fff; color:#000; padding:0 6px; border-radius:4px; font-weight:bold; font-size:1.2rem;">0 pts</span>
+                </div>
             </div>
             
             <div id="dynamic-content">
@@ -78,25 +84,40 @@
         let myTeamId = null;
         let myScore = 0;
         let activeTab = 'mod1';
-        let db = { teams: [], mails: [], clips: [], quiz: [] };
+        let db = { teams: [], mails: [], clips: [], quiz: [], board_items: [], osint_tasks: [], materials: [], teaching_slides: [], stations: [] };
         let submittedAnswers = new Set(); // Local cache to disable buttons immediately
 
         async function init() {
             if (!supabaseClient) return;
             
-            const res = await Promise.all([
+            try {
+                const res = await Promise.all([
                 supabaseClient.from('teams').select('*').order('id'),
                 supabaseClient.from('mails').select('*').order('id'),
                 supabaseClient.from('clips').select('*').order('id'),
                 supabaseClient.from('quiz_questions').select('*').order('id'),
+                supabaseClient.from('board_items').select('*').order('id'),
+                supabaseClient.from('osint_tasks').select('*').order('id'),
+                supabaseClient.from('materials').select('*').order('id'),
+                supabaseClient.from('teaching_slides').select('*').order('id'),
+                supabaseClient.from('stations').select('*').order('id'),
                 supabaseClient.from('session_state').select('active_tab').maybeSingle()
-            ]);
+                ]);
+                
+                for (let i = 0; i < res.length; i++) {
+                    if (res[i].error) throw res[i].error;
+                }
             
             db.teams = res[0].data || [];
             db.mails = res[1].data || [];
             db.clips = res[2].data || [];
             db.quiz = res[3].data || [];
-            if(res[4].data) activeTab = res[4].data.active_tab;
+            db.board_items = res[4].data || [];
+            db.osint_tasks = res[5].data || [];
+            db.materials = res[6].data || [];
+            db.teaching_slides = res[7].data || [];
+            db.stations = res[8].data || [];
+            if(res[9].data) activeTab = res[9].data.active_tab;
             
             document.getElementById('loading').style.display = 'none';
             document.getElementById('app').style.display = 'block';
@@ -108,6 +129,19 @@
                 setTimeout(() => joinTeam(parseInt(savedTeam)), 100);
             } else {
                 renderJoinScreen();
+            }
+            
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: red; max-width: 600px; margin: 0 auto; text-align: left;">
+                        <h3>Failed to load data from Supabase</h3>
+                        <p>Error: ${err.message || JSON.stringify(err)}</p>
+                        <br>
+                        <p>Did you run the updated <code>schema.sql</code> in your Supabase SQL Editor?</p>
+                    </div>
+                `;
+                return;
             }
             
             // Listen for Realtime Broadcasts for Tab Switching
@@ -144,6 +178,31 @@
                     if(idx > -1) db.quiz[idx] = payload.new;
                     if(activeTab === 'quiz') renderActiveTab();
                 })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'board_items' }, payload => {
+                    const idx = db.board_items.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.board_items[idx] = payload.new;
+                    if(activeTab === 'mod1') renderActiveTab();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'osint_tasks' }, payload => {
+                    const idx = db.osint_tasks.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.osint_tasks[idx] = payload.new;
+                    if(activeTab === 'lab5') renderActiveTab();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'materials' }, payload => {
+                    const idx = db.materials.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.materials[idx] = payload.new;
+                    if(activeTab === 'materials') renderActiveTab();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teaching_slides' }, payload => {
+                    const idx = db.teaching_slides.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.teaching_slides[idx] = payload.new;
+                    if(activeTab === 'teaching') renderActiveTab();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stations' }, payload => {
+                    const idx = db.stations.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.stations[idx] = payload.new;
+                    if(activeTab === 'lab4') renderActiveTab();
+                })
                 .subscribe();
         }
 
@@ -172,12 +231,39 @@
             if(data) data.forEach(a => submittedAnswers.add(`${a.module}_${a.question_id}`));
             
             renderActiveTab();
+            updateBadges();
+        }
+
+        function updateBadges() {
+            let b = 'Novice';
+            if (myScore >= 5) b = 'Phishing Spotter';
+            if (myScore >= 10) b = 'Defensive Expert';
+            if (myScore >= 15) b = 'Cyber Master';
+            document.getElementById('badge-label').innerText = b;
         }
 
         function renderActiveTab() {
             const container = document.getElementById('dynamic-content');
             
-            if (activeTab === 'lab1') {
+            if (activeTab === 'mod1') {
+                container.innerHTML = `
+                    <h2>AI in Cybersecurity — Attack vs Defense</h2>
+                    <p style="margin-bottom:1rem; color:var(--text-secondary);">Categorize the following items as Attack (A) or Defense (D).</p>
+                    ${db.board_items.map(b => {
+                        const submitted = submittedAnswers.has(`mod1_${b.id}`);
+                        return `
+                        <div class="card">
+                            <div class="card-header">Item ${b.id}</div>
+                            <div style="font-weight: 600; font-size: 1rem; margin-bottom: 1rem;">${b.text}</div>
+                            ${b.status !== 'unsorted' ? `<div style="padding:0.5rem; text-align:center; font-weight:bold; background:var(--border-color); border-radius:4px;">Sorted as: ${b.status.toUpperCase()}</div>` : `
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitAnswer('mod1', '${b.id}', 'A')">Attack (A)</button>
+                                <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitAnswer('mod1', '${b.id}', 'D')">Defense (D)</button>
+                            </div>`}
+                        </div>`;
+                    }).join('')}
+                `;
+            } else if (activeTab === 'lab1') {
                 container.innerHTML = `
                     <h2>AI-Powered Phishing</h2>
                     <p style="margin-bottom:1rem; color:var(--text-secondary);">Vote on each sample shown on the main screen.</p>
@@ -213,6 +299,40 @@
                         </div>`;
                     }).join('')}
                 `;
+            } else if (activeTab === 'lab5') {
+                container.innerHTML = `
+                    <h2>OSINT Challenge</h2>
+                    <p style="margin-bottom:1rem; color:var(--text-secondary);">Use open source intelligence tools to find the flags.</p>
+                    ${db.osint_tasks.map(t => {
+                        const submitted = submittedAnswers.has(`lab5_${t.id}`);
+                        return `
+                        <div class="card">
+                            <div class="card-header">Task ${t.id}</div>
+                            <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem;">${t.title}</div>
+                            <p style="font-size: 0.9rem; margin-bottom: 1rem;">${t.description}</p>
+                            <p style="font-size: 0.8rem; margin-bottom: 1rem; color: var(--text-secondary); font-style: italic;">Hint: ${t.hint}</p>
+                            ${!t.is_active ? `<div style="padding:0.5rem; text-align:center; font-weight:bold; background:var(--border-color); border-radius:4px;">Task Locked</div>` : `
+                            <div style="display:flex; gap:0.5rem; flex-direction:column;">
+                                <input type="text" id="osint_input_${t.id}" ${submitted ? 'disabled' : ''} placeholder="Enter your answer..." style="padding:0.8rem; border:1px solid var(--border-color); border-radius:4px; font-family:var(--font-mono);">
+                                <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitOSINT(${t.id})">SUBMIT ANSWER</button>
+                            </div>`}
+                        </div>`;
+                    }).join('')}
+                `;
+            } else if (activeTab === 'materials') {
+                container.innerHTML = `
+                    <h2>Materials & Roadmap</h2>
+                    <p style="margin-bottom:1rem; color:var(--text-secondary);">Download PDFs and view the cyber roadmap.</p>
+                    <div style="display:flex; flex-direction:column; gap:1rem;">
+                    ${db.materials.map(m => {
+                        return `
+                        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
+                            <div style="font-weight:600;">${m.title}</div>
+                            ${m.is_unlocked ? `<a href="${m.url}" target="_blank" class="btn" style="width:auto; margin:0;">Open ${m.type.toUpperCase()}</a>` : `<span style="color:var(--text-secondary); font-size:0.8rem;">Locked</span>`}
+                        </div>`;
+                    }).join('')}
+                    </div>
+                `;
             } else if (activeTab === 'quiz') {
                 container.innerHTML = `
                     <h2>Closing Quiz</h2>
@@ -229,6 +349,34 @@
                             </div>`}
                         </div>`;
                     }).join('')}
+                `;
+            } else if (activeTab === 'teaching') {
+                const activeSlide = db.teaching_slides.find(s => s.is_active);
+                container.innerHTML = `
+                    <h2>Teaching Notes</h2>
+                    ${activeSlide ? `
+                    <div class="card" style="padding: 2rem;">
+                        <div style="font-weight: 600; font-size: 1.5rem; margin-bottom: 1rem;">${activeSlide.title}</div>
+                        <p style="font-size: 1.1rem; line-height:1.6;">${activeSlide.content}</p>
+                    </div>` : `
+                    <div class="card" style="text-align: center; padding: 3rem 1rem;">
+                        <h3 style="margin-bottom:0.5rem;">Eyes on the main screen</h3>
+                        <p style="color:var(--text-secondary);">Waiting for the facilitator to present a slide.</p>
+                    </div>`}
+                `;
+            } else if (activeTab === 'lab4') {
+                container.innerHTML = `
+                    <h2>Defensive Tools</h2>
+                    <p style="margin-bottom:1rem; color:var(--text-secondary);">Explore the unlocked tools below.</p>
+                    <div style="display:flex; flex-direction:column; gap:1rem;">
+                    ${db.stations.map(s => {
+                        return `
+                        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; opacity: ${s.is_active ? '1' : '0.5'};">
+                            <div style="font-weight:600;">${s.name}</div>
+                            ${s.is_active && s.url ? `<a href="${s.url}" target="_blank" class="btn" style="width:auto; margin:0;">Visit Tool</a>` : `<span style="color:var(--text-secondary); font-size:0.8rem;">Locked</span>`}
+                        </div>`;
+                    }).join('')}
+                    </div>
                 `;
             } else {
                 container.innerHTML = `
@@ -258,11 +406,45 @@
             showToast(`Answer submitted!`);
         }
 
+        function submitOSINT(id) {
+            const input = document.getElementById(`osint_input_${id}`);
+            if(!input || !input.value.trim()) return;
+            submitAnswer('lab5', id.toString(), input.value.trim());
+        }
+
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function downloadNotes() {
+            let content = "Cybersecurity with AI - Session Notes\n";
+            content += "=====================================\n\n";
+            
+            content += "## Teaching Notes\n";
+            db.teaching_slides.forEach(s => {
+                content += `- ${s.title}: ${s.content}\n`;
+            });
+            content += "\n";
+            
+            content += "## Tools Unlocked\n";
+            db.stations.forEach(s => {
+                if (s.is_active && s.url) {
+                    content += `- ${s.name}: ${s.url}\n`;
+                }
+            });
+            content += "\n";
+            
+            const blob = new Blob([content], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Cyber_Notes_Team_${myTeamId}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Notes Downloaded!");
         }
 
         window.onload = init;
