@@ -73,6 +73,7 @@ CREATE TABLE clips (
     id INT PRIMARY KEY,
     label TEXT NOT NULL,
     title TEXT NOT NULL,
+    url TEXT,
     correct TEXT NOT NULL,
     explanation TEXT NOT NULL,
     answered BOOLEAN DEFAULT false
@@ -247,9 +248,9 @@ INSERT INTO mails (id, team_id, label, sender, body, correct, answered) VALUES
 (39, 12, 'E3', 'alert-12@security-notify.com', 'New login detected on Team 12 dashboard. Verify identity immediately.', 'PHISHING', false);
 
 -- Clips
-INSERT INTO clips (id, label, title, correct, explanation, answered) VALUES 
-(1, 'Clip 1', 'CEO Quarterly Update Announcement', 'FAKE', 'Unnatural blinking pattern and audio artifact at 0:04.', false),
-(2, 'Clip 2', 'Security Conference Keynote', 'REAL', 'Genuine footage from last year''s summit.', false);
+INSERT INTO clips (id, label, title, url, correct, explanation, answered) VALUES 
+(1, 'Clip 1', 'CEO Quarterly Update Announcement', 'https://www.youtube.com/embed/oxXpB9pSETo', 'FAKE', 'Unnatural blinking pattern and audio artifact at 0:04.', false),
+(2, 'Clip 2', 'Security Conference Keynote', 'https://www.youtube.com/embed/cQ54GDm1eL0', 'REAL', 'Genuine footage from last year''s summit.', false);
 
 -- Stations (Added more jaw-dropping free tools)
 INSERT INTO stations (id, name, url, is_active) VALUES 

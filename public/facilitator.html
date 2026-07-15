@@ -612,7 +612,9 @@
             const cards = db.clips.map(c => `
                 <div class="card">
                     <div class="card-header"><span>${c.label}</span></div>
-                    <div class="card-body"><div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">${c.title}</div><p style="color: var(--text-secondary); margin-bottom: 1rem;">Play clip externally.</p>
+                    <div class="card-body">
+                        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">${c.title}</div>
+                        ${c.url ? `<iframe width="100%" height="200" src="${c.url}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="margin-bottom: 1rem; border-radius: 8px;"></iframe>` : `<p style="color: var(--text-secondary); margin-bottom: 1rem;">Play clip externally.</p>`}
                         ${c.answered ? `<div style="padding: 1rem; background: #fff; border: 1px solid var(--border-color); border-radius: 4px;"><strong style="color: ${c.correct === 'REAL' ? 'green' : 'red'};">${c.correct}</strong><br><span style="font-size: 0.9rem;">${c.explanation}</span></div>` 
                         : `<div class="card-actions"><button class="btn btn-outline" onclick="revealDeepfake(${c.id})">Reveal Answer</button></div>`}
                     </div>

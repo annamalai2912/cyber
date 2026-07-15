@@ -45,9 +45,9 @@ INSERT INTO mails (id, team_id, label, sender, body, correct, answered) VALUES
 (3, 0, 'S3', 'security-alert@paypa1-verify.com', 'Unusual sign-in detected — action required. We noticed a login from a new device. If this wasn''t you, click below within 30 minutes to secure your account before it is locked permanently.', 'PHISHING', false)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO clips (id, label, title, correct, explanation, answered) VALUES 
-(1, 'Clip 1', 'CEO Quarterly Update Announcement', 'FAKE', 'Unnatural blinking pattern and audio artifact at 0:04.', false),
-(2, 'Clip 2', 'Security Conference Keynote', 'REAL', 'Genuine footage from last year''s summit.', false)
+INSERT INTO clips (id, label, title, url, correct, explanation, answered) VALUES 
+(1, 'Clip 1', 'CEO Quarterly Update Announcement', 'https://www.youtube.com/embed/oxXpB9pSETo', 'FAKE', 'Unnatural blinking pattern and audio artifact at 0:04.', false),
+(2, 'Clip 2', 'Security Conference Keynote', 'https://www.youtube.com/embed/cQ54GDm1eL0', 'REAL', 'Genuine footage from last year''s summit.', false)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO stations (id, name, url, is_active) VALUES 
