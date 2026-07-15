@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Session Console - Cybersecurity with AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f1ebd9;
+            --bg-page: #f1ebd9;
+            --text-primary: #1a1a1a;
+            --text-secondary: #5a5a5a;
+            --panel-bg: #212320;
+            --panel-text: #e8e8e8;
+            --panel-text-dim: #8b8d8a;
+            --border-color: #d2cdbe;
+            --card-bg: #e6e0cc;
+            --card-bg-light: #ece7d7;
+            --accent: #d5e0ca;
+            --highlight: #f0f0f0;
+            
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'IBM Plex Sans', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .badge {
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 99px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            max-width: 800px;
+        }
+
+        /* Clock Panel */
+        .clock-panel {
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--panel-text);
+        }
+
+        .clock-top {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .time-display {
+            font-family: var(--font-mono);
+            font-size: 3rem;
+            font-weight: 600;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .time-display:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .current-phase {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--panel-text-dim);
+            flex-grow: 1;
+        }
+
+        .clock-controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.6rem 1.2rem;
+            border-radius: 99px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--panel-text);
+            color: var(--panel-bg);
+        }
+        .btn-primary:hover {
+            background-color: #fff;
+        }
+
+        .btn-outline-dark {
+            background-color: transparent;
+            border-color: var(--panel-text-dim);
+            color: var(--panel-text);
+        }
+        .btn-outline-dark:hover {
+            border-color: var(--panel-text);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        .btn-outline:hover {
+            border-color: var(--text-secondary);
+        }
+        
+        .btn-outline.selected {
+            background-color: var(--panel-bg);
+            color: var(--panel-text);
+            border-color: var(--panel-bg);
+        }
+
+        /* Timeline */
+        .timeline {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 1px;
+            background-color: #333;
+        }
+
+        .timeline-segment {
+            background-color: var(--panel-bg);
+            padding: 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--panel-text-dim);
+            position: relative;
+            cursor: pointer;
+            border-top: 2px solid transparent;
+        }
+        
+        .timeline-segment:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .timeline-segment.active {
+            color: var(--panel-text);
+            border-top-color: var(--panel-text);
+        }
+        .timeline-segment.done {
+            opacity: 0.5;
+        }
+
+        .segment-time {
+            margin-bottom: 0.25rem;
+        }
+
+        /* Team Strip */
+        .team-strip {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-page);
+            z-index: 100;
+        }
+
+        .team-strip-label {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .team-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-grow: 1;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+        }
+        
+        .team-chips::-webkit-scrollbar {
+            height: 4px;
+        }
+        .team-chips::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .chip {
+            padding: 0.4rem 0.8rem;
+            border-radius: 99px;
+            border: 1px solid var(--border-color);
+            background: white;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+        }
+        
+        .chip:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .chip.active {
+            background-color: var(--panel-bg);
+            color: var(--panel-text);
+            border-color: var(--panel-bg);
+        }
+        
+        .chip-score {
+            font-family: var(--font-mono); 
+            background: var(--border-color); 
+            color: var(--text-primary); 
+            padding: 0 4px; 
+            border-radius: 4px; 
+            font-size: 0.7rem;
+        }
+        .chip.active .chip-score {
+            background: #fff;
+            color: #000;
+        }
+
+        /* Tabs Navigation */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            text-transform: uppercase;
+        }
+
+        .tab-btn.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--text-primary);
+        }
+
+        /* Cards / Tab Contents */
+        .tab-content {
+            display: none;
+            background-color: #f6f5ef;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-header {
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-label {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: #d35400; /* Orange dot from design */
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-label::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #d35400;
+            border-radius: 50%;
+        }
+        
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Board Layout */
+        .board-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        .board-column {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            min-height: 300px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .board-col-header {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .board-item {
+            background-color: transparent;
+            padding: 0.75rem 0;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px dotted var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        
+        .board-actions button {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-left: 0.25rem;
+        }
+        .board-actions button:hover {
+            background-color: var(--highlight);
+        }
+
+        /* Generic Grid Layout */
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .grid-1 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-body {
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+        
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .card-actions .btn {
+            flex: 1;
+            background-color: white;
+        }
+
+        /* Toast */
+        #toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 1000;
+        }
+
+        .toast {
+            background-color: var(--panel-bg);
+            color: var(--panel-text);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Leaderboard Panel */
+        .leaderboard-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(2px);
+            z-index: 999;
+            display: none;
+            justify-content: flex-end;
+        }
+        
+        .leaderboard-overlay.active {
+            display: flex;
+        }
+        
+        .leaderboard-sidebar {
+            background: var(--bg-page);
+            width: 400px;
+            height: 100%;
+            padding: 2rem;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            border-left: 1px solid var(--border-color);
+        }
+        
+        .leaderboard-overlay.active .leaderboard-sidebar {
+            transform: translateX(0);
+        }
+        
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            font-family: var(--font-display);
+        }
+        
+        .team-rank-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+        
+        .rank-num {
+            font-family: var(--font-mono);
+            width: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .rank-bar-container {
+            flex-grow: 1;
+        }
+        
+        .rank-team-name {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        
+        .rank-bar {
+            height: 8px;
+            background-color: var(--panel-bg);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .rank-score {
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+        
+        .quiz-item {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .quiz-question {
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .quiz-btn {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: background 0.2s;
+        }
+        .quiz-btn:hover { background: #f0f0f0; }
+        .quiz-btn.correct { background: #d5e0ca; border-color: #8b9c7a; }
+        .quiz-btn.incorrect { background: #e0caca; border-color: #9c7a7a; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-top">
+                <span>TECHKNOTS > ROCKY'S LAB</span>
+                <span class="badge">LIVE SESSION CONSOLE</span>
+            </div>
+            <h1>Cybersecurity with AI</h1>
+            <p class="subtitle">Defending Against Modern Cyber Attacks — a 3-hour interactive lab session. Run this on the projector, and let teams work through each module on their own systems.</p>
+        </header>
+
+        <!-- Mission Clock Panel -->
+        <div class="clock-panel">
+            <div class="clock-top">
+                <div class="time-display" id="clock-display" title="Click to edit time" onclick="promptEditTime()">00:00:00</div>
+                <div class="current-phase" id="current-phase-label">WELCOME & HOOK</div>
+                <div class="clock-controls">
+                    <button class="btn btn-primary" id="btn-start" onclick="toggleTimer()">START SESSION</button>
+                    <button class="btn btn-outline-dark" id="btn-pause" onclick="pauseTimer()">PAUSE</button>
+                    <button class="btn btn-outline-dark" id="btn-reset" onclick="resetTimer()">RESET</button>
+                </div>
+            </div>
+            <div class="timeline" id="timeline">
+                <!-- segments generated by JS -->
+            </div>
+        </div>
+
+        <!-- Team Strip -->
+        <div class="team-strip">
+            <div class="team-strip-label">ACTIVE TEAM</div>
+            <div class="team-chips" id="team-chips">
+                <!-- chips generated by JS -->
+            </div>
+            <button class="btn btn-outline leaderboard-btn" onclick="toggleLeaderboard()" style="background: white;">LEADERBOARD ▾</button>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('mod1')">Mod 1</button>
+            <button class="tab-btn" onclick="switchTab('lab1')">Lab 1</button>
+            <button class="tab-btn" onclick="switchTab('lab2')">Lab 2</button>
+            <button class="tab-btn" onclick="switchTab('lab3')">Lab 3</button>
+            <button class="tab-btn" onclick="switchTab('lab4')">Lab 4</button>
+            <button class="tab-btn" onclick="switchTab('quiz')">Quiz</button>
+        </div>
+
+        <div class="main-content">
+            <!-- Tab Contents -->
+            <div class="tab-content active" id="tab-mod1">
+                <div class="section-header">
+                    <div class="section-label">MODULE 1 - 0:10-0:40</div>
+                    <h2 class="section-title">AI in Cybersecurity — Attack vs Defense</h2>
+                    <p>Sort each item onto the board. Point value goes to whichever team calls it first — click a chip after they answer.</p>
+                </div>
+                
+                <div class="board-container">
+                    <div class="board-column">
+                        <div class="board-col-header">
+                            <span>Attack</span>
+                            <span id="attack-count">0</span>
+                        </div>
+                        <div id="col-attack" class="board-list"></div>
+                    </div>
+                    <div class="board-column">
+                        <div class="board-col-header">
+                            <span>Defense</span>
+                            <span id="defense-count">0</span>
+                        </div>
+                        <div id="col-defense" class="board-list"></div>
+                    </div>
+                    <div class="board-column">
+                        <div class="board-col-header">
+                            <span>Unsorted</span>
+                            <span id="unsorted-count">8</span>
+                        </div>
+                        <div id="col-unsorted" class="board-list">
+                            <!-- Items will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="tab-lab1">
+                <div class="section-header">
+                    <div class="section-label">LAB 1 - 0:40-1:15</div>
+                    <h2 class="section-title">AI-Powered Phishing</h2>
+                    <p>Score each sample against the checklist, then lock in the active team's verdict. Two of the three are AI-generated phishing.</p>
+                </div>
+                <div id="phishing-container" class="grid-3">
+                    <!-- Phishing cards generated by JS -->
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-lab2">
+                <div class="section-header">
+                    <div class="section-label">LAB 2 - 1:25-2:00</div>
+                    <h2 class="section-title">Prompt Injection (Gandalf)</h2>
+                    <p>Track levels completed on Gandalf for the active team.</p>
+                </div>
+                <div class="card" style="max-width: 400px; background: var(--card-bg);">
+                    <div style="font-family: var(--font-mono); margin-bottom: 1rem; color: var(--text-secondary)">Levels Cleared</div>
+                    <div id="gandalf-level" style="font-size:3rem; font-family: var(--font-mono); font-weight:600; margin-bottom: 1.5rem;">0</div>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <button class="btn btn-outline" style="flex:1; background:white;" onclick="changeGandalfLevel(-1)">- 1 LEVEL</button>
+                        <button class="btn btn-outline" style="flex:1; background:white;" onclick="changeGandalfLevel(1)">+ 1 LEVEL</button>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%" onclick="logGandalfScore()">LOG SCORE FOR ACTIVE TEAM</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-lab3">
+                <div class="section-header">
+                    <div class="section-label">LAB 3 - 2:00-2:30</div>
+                    <h2 class="section-title">Deepfake Detection</h2>
+                    <p>Vote Real or Fake for each clip, then reveal the answer for points.</p>
+                </div>
+                <div id="deepfake-container" class="grid-2">
+                    <!-- Deepfake cards generated by JS -->
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-lab4">
+                <div class="section-header">
+                    <div class="section-label">LAB 4 - 2:30-2:50</div>
+                    <h2 class="section-title">Defensive Tools Showcase</h2>
+                    <p>Toggle stations visited to award +1 points. Click again to revoke if it was a mistake.</p>
+                </div>
+                <div id="stations-container" class="grid-2">
+                    <!-- Station toggles generated by JS -->
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-quiz">
+                <div class="section-header">
+                    <div class="section-label">QUIZ - 2:50-3:00</div>
+                    <h2 class="section-title">Closing Quiz</h2>
+                    <p>Lock in the final answers for the active team.</p>
+                </div>
+                <div id="quiz-container" class="grid-2">
+                    <!-- Quiz questions generated by JS -->
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Leaderboard Sidebar -->
+    <div class="leaderboard-overlay" id="leaderboard-overlay" onclick="if(event.target===this) toggleLeaderboard()">
+        <div class="leaderboard-sidebar">
+            <div class="leaderboard-header">
+                <h2>Leaderboard</h2>
+                <button class="btn btn-outline" onclick="toggleLeaderboard()" style="background:white;">CLOSE</button>
+            </div>
+            <div id="leaderboard-list">
+                <!-- Ranks -->
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // --- Data Models ---
+        const schedule = [
+            { id: 'welcome', title: 'Welcome & hook', timeStr: '0:00', startSec: 0 },
+            { id: 'mod1', title: 'Mod 1 - Attack vs Defense', timeStr: '0:10', startSec: 10 * 60 },
+            { id: 'lab1', title: 'Lab 1 - AI Phishing', timeStr: '0:40', startSec: 40 * 60 },
+            { id: 'break', title: 'Break', timeStr: '1:15', startSec: 75 * 60 },
+            { id: 'lab2', title: 'Lab 2 - Prompt Injection', timeStr: '1:25', startSec: 85 * 60 },
+            { id: 'lab3', title: 'Lab 3 - Deepfake Detection', timeStr: '2:00', startSec: 120 * 60 },
+            { id: 'lab4', title: 'Lab 4 - Defensive Tools', timeStr: '2:30', startSec: 150 * 60 },
+            { id: 'quiz', title: 'Quiz & wrap-up', timeStr: '2:50', startSec: 170 * 60 }
+        ];
+
+        let teams = Array.from({length: 12}, (_, i) => ({
+            id: i + 1,
+            name: `Team ${i + 1}`,
+            score: 0
+        }));
+
+        const boardItems = [
+            { id: 1, text: 'AI-written phishing text', correct: 'A', status: 'unsorted' },
+            { id: 2, text: 'Deepfake voice cloning', correct: 'A', status: 'unsorted' },
+            { id: 3, text: 'AI-generated malware code', correct: 'A', status: 'unsorted' },
+            { id: 4, text: 'Automated vulnerability scanning', correct: 'D', status: 'unsorted' },
+            { id: 5, text: 'Anomaly / fraud scoring', correct: 'D', status: 'unsorted' },
+            { id: 6, text: 'Spam & phishing filters', correct: 'D', status: 'unsorted' },
+            { id: 7, text: 'SOC analyst copilots', correct: 'D', status: 'unsorted' },
+            { id: 8, text: 'Behavioral login detection', correct: 'D', status: 'unsorted' }
+        ];
+
+        const mails = [
+            { id: 1, label: 'M1', sender: 'IT-Support@techk-nots.com', body: 'Urgent: Your account will be suspended in 2 hours. Verify your credentials immediately using the secure link below to avoid interruption.', correct: 'PHISHING', answered: false },
+            { id: 2, label: 'M2', sender: 'placements@techknots.in', body: 'Hi all, attaching the confirmed schedule for next week\'s VAC sessions. Let me know if your slot needs to move. No links, no attachments needed to open right away.', correct: 'GENUINE', answered: false },
+            { id: 3, label: 'M3', sender: 'security-alert@paypa1-verify.com', body: 'Unusual sign-in detected — action required. We noticed a login from a new device. If this wasn\'t you, click below within 30 minutes to secure your account before it is locked permanently.', correct: 'PHISHING', answered: false }
+        ];
+
+        const clips = [
+            { id: 1, label: 'Clip 1', title: 'CEO Quarterly Update Announcement', correct: 'FAKE', explanation: 'Unnatural blinking pattern and audio artifact at 0:04.', answered: false },
+            { id: 2, label: 'Clip 2', title: 'Security Conference Keynote', correct: 'REAL', explanation: 'Genuine footage from last year\'s summit.', answered: false }
+        ];
+
+        const stations = ['Have I Been Pwned', 'VirusTotal', 'Google Safe Browsing', 'Windows Defender'];
+        let stationState = [false, false, false, false];
+
+        const quizQuestions = [
+            { id: 1, text: 'What is Prompt Injection?', options: ['Bypassing filters via language input', 'Injecting SQL commands', 'Phishing via email', 'A firewall rule'], answer: 0, answered: false },
+            { id: 2, text: 'Which tool scans files for known malware signatures?', options: ['Have I Been Pwned', 'VirusTotal', 'Gandalf', 'Nmap'], answer: 1, answered: false },
+            { id: 3, text: 'A common visual tell for deepfakes is:', options: ['High resolution', 'Perfect audio sync', 'Unnatural blinking/teeth', 'Black and white color'], answer: 2, answered: false },
+            { id: 4, text: 'AI is most effective for defenders in:', options: ['Writing malware', 'Pattern recognition at scale', 'Social engineering', 'Physical security'], answer: 1, answered: false },
+            { id: 5, text: 'The goal of Gandalf was to:', options: ['Guess the password', 'Bypass the LLM guardrails', 'Detect deepfakes', 'Sort attack vs defense'], answer: 1, answered: false },
+            { id: 6, text: 'Which domain is a typo-squatting example?', options: ['google.com', 'microsoft.com', 'paypa1.com', 'techknots.in'], answer: 2, answered: false }
+        ];
+
+        // --- State ---
+        let activeTeamId = 1;
+        let timerSecs = 0;
+        let timerInterval = null;
+        let isRunning = false;
+        let gandalfLevel = 0;
+
+        // --- Init ---
+        function init() {
+            renderTimeline();
+            renderTeams();
+            renderBoard();
+            renderPhishing();
+            renderDeepfakes();
+            renderStations();
+            renderQuiz();
+            updateLeaderboard();
+        }
+
+        // --- Timer Functions ---
+        function formatTime(secs) {
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s = secs % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function updateClockDisplay() {
+            document.getElementById('clock-display').innerText = formatTime(timerSecs);
+            updateTimelineHighlight();
+        }
+
+        function toggleTimer() {
+            if (!isRunning) {
+                timerInterval = setInterval(() => {
+                    timerSecs++;
+                    updateClockDisplay();
+                }, 1000);
+                isRunning = true;
+                document.getElementById('btn-start').innerText = 'RUNNING...';
+                document.getElementById('btn-start').disabled = true;
+            }
+        }
+        
+        function pauseTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                document.getElementById('btn-start').innerText = 'RESUME';
+                document.getElementById('btn-start').disabled = false;
+            }
+        }
+        
+        function resetTimer() {
+            pauseTimer();
+            timerSecs = 0;
+            updateClockDisplay();
+            document.getElementById('btn-start').innerText = 'START SESSION';
+        }
+        
+        function promptEditTime() {
+            const input = prompt("Enter new time in MM or HH:MM format:", Math.floor(timerSecs / 60));
+            if (input !== null && input.trim() !== "") {
+                let parts = input.split(':').map(Number);
+                if (parts.length === 1 && !isNaN(parts[0])) {
+                    timerSecs = parts[0] * 60;
+                } else if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    timerSecs = parts[0] * 3600 + parts[1] * 60;
+                }
+                updateClockDisplay();
+            }
+        }
+
+        // --- Timeline ---
+        function renderTimeline() {
+            const container = document.getElementById('timeline');
+            container.innerHTML = schedule.map((seg, idx) => `
+                <div class="timeline-segment" id="seg-${idx}" onclick="jumpToSegment(${idx})">
+                    <div class="segment-time">${seg.timeStr}</div>
+                    <div>${seg.title}</div>
+                </div>
+            `).join('');
+            updateTimelineHighlight();
+        }
+
+        function updateTimelineHighlight() {
+            let activeIdx = 0;
+            for (let i = 0; i < schedule.length; i++) {
+                if (timerSecs >= schedule[i].startSec) {
+                    activeIdx = i;
+                }
+            }
+            
+            document.getElementById('current-phase-label').innerText = schedule[activeIdx].title;
+            
+            schedule.forEach((_, idx) => {
+                const el = document.getElementById(`seg-${idx}`);
+                el.classList.remove('active', 'done');
+                if (idx < activeIdx) {
+                    el.classList.add('done');
+                } else if (idx === activeIdx) {
+                    el.classList.add('active');
+                }
+            });
+        }
+        
+        function jumpToSegment(idx) {
+            timerSecs = schedule[idx].startSec;
+            updateClockDisplay();
+        }
+
+        // --- Teams ---
+        function renderTeams() {
+            const container = document.getElementById('team-chips');
+            container.innerHTML = teams.map(team => `
+                <button class="chip ${team.id === activeTeamId ? 'active' : ''}" onclick="setActiveTeam(${team.id})">
+                    ${team.name} <span class="chip-score">${team.score}</span>
+                </button>
+            `).join('');
+        }
+
+        function setActiveTeam(id) {
+            activeTeamId = id;
+            renderTeams();
+        }
+
+        function awardPoints(points, reason) {
+            const team = teams.find(t => t.id === activeTeamId);
+            team.score += points;
+            renderTeams();
+            updateLeaderboard();
+            showToast(`${points > 0 ? '+' : ''}${points} pts → ${team.name} (now ${team.score}) - ${reason}`);
+        }
+
+        // --- Leaderboard ---
+        function toggleLeaderboard() {
+            const el = document.getElementById('leaderboard-overlay');
+            el.classList.toggle('active');
+        }
+
+        function updateLeaderboard() {
+            const sorted = [...teams].sort((a, b) => b.score - a.score);
+            const maxScore = Math.max(10, sorted[0].score); 
+            
+            const container = document.getElementById('leaderboard-list');
+            container.innerHTML = sorted.map((team, idx) => `
+                <div class="team-rank-item">
+                    <div class="rank-num">${idx + 1}</div>
+                    <div class="rank-bar-container">
+                        <div class="rank-team-name">${team.name}</div>
+                        <div class="rank-bar" style="width: ${(team.score / maxScore) * 100}%"></div>
+                    </div>
+                    <div class="rank-score">${team.score}</div>
+                </div>
+            `).join('');
+        }
+
+        // --- Tabs ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // --- Toast ---
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = msg;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Mod 1: Board ---
+        function renderBoard() {
+            const lists = { attack: '', defense: '', unsorted: '' };
+            let counts = { attack: 0, defense: 0, unsorted: 0 };
+            
+            boardItems.forEach(item => {
+                counts[item.status]++;
+                
+                let actions = '';
+                if (item.status === 'unsorted') {
+                    actions = `
+                        <div class="board-actions">
+                            <button onclick="sortBoardItem(${item.id}, 'A')">A</button>
+                            <button onclick="sortBoardItem(${item.id}, 'D')">D</button>
+                        </div>
+                    `;
+                }
+                
+                lists[item.status] += `
+                    <div class="board-item">
+                        <span>${item.text}</span>
+                        ${actions}
+                    </div>
+                `;
+            });
+            
+            document.getElementById('col-attack').innerHTML = lists.attack;
+            document.getElementById('col-defense').innerHTML = lists.defense;
+            document.getElementById('col-unsorted').innerHTML = lists.unsorted;
+            
+            document.getElementById('attack-count').innerText = counts.attack;
+            document.getElementById('defense-count').innerText = counts.defense;
+            document.getElementById('unsorted-count').innerText = counts.unsorted;
+        }
+
+        function sortBoardItem(id, guess) {
+            const item = boardItems.find(i => i.id === id);
+            const isCorrect = item.correct === guess;
+            
+            item.status = item.correct === 'A' ? 'attack' : 'defense';
+            
+            if (isCorrect) {
+                awardPoints(2, 'Correct board sort');
+            } else {
+                showToast(`Incorrect! It was ${item.correct === 'A' ? 'Attack' : 'Defense'}. (0 pts)`);
+            }
+            
+            renderBoard();
+        }
+
+        // --- Lab 1: Phishing ---
+        function renderPhishing() {
+            const container = document.getElementById('phishing-container');
+            container.innerHTML = mails.map(m => `
+                <div class="card">
+                    <div class="card-header">
+                        <span>Sample ${m.label}</span>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem;">${m.sender}</div>
+                        <p>${m.body}</p>
+                    </div>
+                    <div class="card-actions">
+                        ${m.answered ? `
+                            <div style="text-align: center; width: 100%; font-weight: bold; padding: 0.5rem; background: ${m.correct === 'PHISHING' ? '#e0caca' : '#cae0cb'}; border-radius: 4px;">
+                                ACTUAL: ${m.correct}
+                            </div>
+                        ` : `
+                            <button class="btn btn-outline" onclick="judgePhishing(${m.id}, 'PHISHING')">PHISHING</button>
+                            <button class="btn btn-outline" onclick="judgePhishing(${m.id}, 'GENUINE')">GENUINE</button>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function judgePhishing(id, verdict) {
+            const m = mails.find(x => x.id === id);
+            m.answered = true;
+            if (m.correct === verdict) {
+                awardPoints(2, 'Correct Phishing verdict');
+            } else {
+                showToast('Incorrect verdict. (0 pts)');
+            }
+            renderPhishing();
+        }
+
+        // --- Lab 2: Gandalf ---
+        function changeGandalfLevel(delta) {
+            gandalfLevel = Math.max(0, gandalfLevel + delta);
+            document.getElementById('gandalf-level').innerText = gandalfLevel;
+        }
+        
+        function logGandalfScore() {
+            if (gandalfLevel > 0) {
+                awardPoints(gandalfLevel, `Gandalf levels cleared`);
+                gandalfLevel = 0;
+                document.getElementById('gandalf-level').innerText = gandalfLevel;
+            } else {
+                showToast('No levels to log.');
+            }
+        }
+
+        // --- Lab 3: Deepfakes ---
+        function renderDeepfakes() {
+            const container = document.getElementById('deepfake-container');
+            container.innerHTML = clips.map(c => `
+                <div class="card">
+                    <div class="card-header">
+                        <span>${c.label}</span>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">${c.title}</div>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Play clip externally. Vote below.</p>
+                        
+                        ${c.answered ? `
+                            <div style="padding: 1rem; background: #fff; border: 1px solid var(--border-color); border-radius: 4px;">
+                                <strong style="color: ${c.correct === 'REAL' ? 'green' : 'red'};">${c.correct}</strong><br>
+                                <span style="font-size: 0.9rem;">${c.explanation}</span>
+                            </div>
+                        ` : `
+                            <div class="card-actions">
+                                <button class="btn btn-outline" onclick="judgeDeepfake(${c.id}, 'REAL')">REAL</button>
+                                <button class="btn btn-outline" onclick="judgeDeepfake(${c.id}, 'FAKE')">FAKE</button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function judgeDeepfake(id, verdict) {
+            const c = clips.find(x => x.id === id);
+            c.answered = true;
+            if (c.correct === verdict) {
+                awardPoints(2, 'Correct Deepfake verdict');
+            } else {
+                showToast(`Incorrect! It was ${c.correct}. (0 pts)`);
+            }
+            renderDeepfakes();
+        }
+
+        // --- Lab 4: Stations ---
+        function renderStations() {
+            const container = document.getElementById('stations-container');
+            container.innerHTML = stations.map((station, i) => `
+                <div class="card" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 1rem 1.5rem;">
+                    <span style="font-weight: 500;">${station}</span>
+                    <button class="btn ${stationState[i] ? 'btn-primary' : 'btn-outline'}" style="${!stationState[i] ? 'background: white;' : ''}" onclick="toggleStation(${i})">
+                        ${stationState[i] ? 'REVOKE -1' : 'AWARD +1'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function toggleStation(idx) {
+            stationState[idx] = !stationState[idx];
+            if (stationState[idx]) {
+                awardPoints(1, `Station: ${stations[idx]}`);
+            } else {
+                awardPoints(-1, `Revoked: ${stations[idx]}`);
+            }
+            renderStations();
+        }
+
+        // --- Quiz ---
+        function renderQuiz() {
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = quizQuestions.map(q => `
+                <div class="quiz-item">
+                    <div class="quiz-question">${q.id}. ${q.text}</div>
+                    <div class="quiz-options">
+                        ${q.options.map((opt, oIdx) => {
+                            let cls = 'quiz-btn';
+                            if (q.answered) {
+                                if (oIdx === q.answer) cls += ' correct';
+                                else cls += ' incorrect';
+                            }
+                            return `<button class="${cls}" ${q.answered ? 'disabled' : `onclick="answerQuiz(${q.id}, ${oIdx})"`}>${opt}</button>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function answerQuiz(qId, selectedIdx) {
+            const q = quizQuestions.find(x => x.id === qId);
+            q.answered = true;
+            if (q.answer === selectedIdx) {
+                awardPoints(1, 'Correct Quiz Answer');
+            } else {
+                showToast('Incorrect Quiz Answer (0 pts)');
+            }
+            renderQuiz();
+        }
+
+        // Bootstrap
+        init();
+    </script>
+</body>
+</html>

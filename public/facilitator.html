@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Session Console - Cybersecurity with AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f1ebd9;
+            --bg-page: #f1ebd9;
+            --text-primary: #1a1a1a;
+            --text-secondary: #5a5a5a;
+            --panel-bg: #212320;
+            --panel-text: #e8e8e8;
+            --panel-text-dim: #8b8d8a;
+            --border-color: #d2cdbe;
+            --card-bg: #e6e0cc;
+            
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'IBM Plex Sans', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-body); background-color: var(--bg-page); color: var(--text-primary); line-height: 1.5; padding: 2rem; min-height: 100vh; }
+        .app-container { max-width: 1200px; margin: 0 auto; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .badge { border: 1px solid var(--border-color); padding: 0.25rem 0.75rem; border-radius: 99px; background: rgba(255,255,255,0.2); }
+        h1 { font-family: var(--font-display); font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+        .subtitle { color: var(--text-secondary); margin-bottom: 2rem; font-size: 1rem; max-width: 800px; }
+        .clock-panel { background-color: var(--panel-bg); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; color: var(--panel-text); }
+        .clock-top { display: flex; align-items: center; gap: 2rem; margin-bottom: 1.5rem; }
+        .time-display { font-family: var(--font-mono); font-size: 3rem; font-weight: 600; cursor: pointer; line-height: 1; }
+        .time-display:hover { opacity: 0.8; text-decoration: underline; }
+        .current-phase { font-family: var(--font-mono); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--panel-text-dim); flex-grow: 1; }
+        .clock-controls { display: flex; gap: 0.75rem; }
+        .btn { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; padding: 0.6rem 1.2rem; border-radius: 99px; cursor: pointer; border: 1px solid transparent; text-transform: uppercase; transition: all 0.2s ease; }
+        .btn-primary { background-color: var(--panel-text); color: var(--panel-bg); }
+        .btn-primary:hover { background-color: #fff; }
+        .btn-outline-dark { background-color: transparent; border-color: var(--panel-text-dim); color: var(--panel-text); }
+        .btn-outline-dark:hover { border-color: var(--panel-text); }
+        .btn-outline { background-color: transparent; border-color: var(--border-color); color: var(--text-primary); }
+        .btn-outline:hover { border-color: var(--text-secondary); }
+        .timeline { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; background-color: #333; }
+        .timeline-segment { background-color: var(--panel-bg); padding: 0.75rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--panel-text-dim); position: relative; cursor: pointer; border-top: 2px solid transparent; }
+        .timeline-segment:hover { background-color: rgba(255,255,255,0.05); }
+        .timeline-segment.active { color: var(--panel-text); border-top-color: var(--panel-text); }
+        .timeline-segment.done { opacity: 0.5; }
+        .segment-time { margin-bottom: 0.25rem; }
+        .team-strip { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding: 1rem 0; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background-color: var(--bg-page); z-index: 100; }
+        .team-strip-label { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); }
+        .team-chips { display: flex; gap: 0.5rem; flex-grow: 1; overflow-x: auto; padding-bottom: 0.25rem; }
+        .chip { padding: 0.4rem 0.8rem; border-radius: 99px; border: 1px solid var(--border-color); background: white; font-family: var(--font-mono); font-size: 0.8rem; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); }
+        .chip:hover { border-color: var(--text-secondary); }
+        .chip.active { background-color: var(--panel-bg); color: var(--panel-text); border-color: var(--panel-bg); }
+        .chip-score { font-family: var(--font-mono); background: var(--border-color); color: var(--text-primary); padding: 0 4px; border-radius: 4px; font-size: 0.7rem; }
+        .chip.active .chip-score { background: #fff; color: #000; }
+        .tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+        .tab-btn { background: none; border: none; padding: 0.5rem 1rem; font-family: var(--font-mono); font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; }
+        .tab-btn.active { color: var(--text-primary); border-bottom-color: var(--text-primary); }
+        .tab-content { display: none; background-color: #f6f5ef; padding: 2rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 2rem; }
+        .tab-content.active { display: block; }
+        .section-header { margin-bottom: 1.5rem; }
+        .section-label { font-family: var(--font-mono); font-size: 0.8rem; color: #d35400; text-transform: uppercase; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .section-label::before { content: ""; display: inline-block; width: 8px; height: 8px; background-color: #d35400; border-radius: 50%; }
+        .section-title { font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .board-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+        .board-column { background-color: var(--card-bg); border-radius: 8px; padding: 1rem; min-height: 300px; border: 1px solid var(--border-color); }
+        .board-col-header { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.8rem; margin-bottom: 1rem; color: var(--text-secondary); }
+        .board-item { background-color: transparent; padding: 0.75rem 0; margin-bottom: 0.5rem; border-bottom: 1px dotted var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+        .board-actions button { background: white; border: 1px solid var(--border-color); border-radius: 4px; width: 24px; height: 24px; font-family: var(--font-mono); font-size: 0.7rem; cursor: pointer; margin-left: 0.25rem; }
+        .board-actions button:hover { background-color: var(--highlight); }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 8px; display: flex; flex-direction: column; }
+        .card-header { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .card-body { font-size: 0.9rem; margin-bottom: 1.5rem; flex-grow: 1; }
+        .card-actions { display: flex; gap: 0.5rem; }
+        .card-actions .btn { flex: 1; background-color: white; }
+        #toast-container { position: fixed; bottom: 2rem; right: 2rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 1000; }
+        .toast { background-color: var(--panel-bg); color: var(--panel-text); padding: 1rem 1.5rem; border-radius: 8px; font-family: var(--font-mono); font-size: 0.9rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: slideIn 0.3s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+        .leaderboard-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.2); backdrop-filter: blur(2px); z-index: 999; display: none; justify-content: flex-end; }
+        .leaderboard-overlay.active { display: flex; }
+        .leaderboard-sidebar { background: var(--bg-page); width: 400px; height: 100%; padding: 2rem; box-shadow: -10px 0 30px rgba(0,0,0,0.1); transform: translateX(100%); transition: transform 0.3s ease; overflow-y: auto; border-left: 1px solid var(--border-color); }
+        .leaderboard-overlay.active .leaderboard-sidebar { transform: translateX(0); }
+        .leaderboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; font-family: var(--font-display); }
+        .team-rank-item { display: flex; align-items: center; margin-bottom: 1rem; gap: 1rem; }
+        .rank-num { font-family: var(--font-mono); width: 20px; color: var(--text-secondary); }
+        .rank-bar-container { flex-grow: 1; }
+        .rank-team-name { font-size: 0.9rem; margin-bottom: 0.25rem; font-weight: 500; }
+        .rank-bar { height: 8px; background-color: var(--panel-bg); border-radius: 4px; width: 0%; transition: width 0.5s ease; }
+        .rank-score { font-family: var(--font-mono); font-weight: 600; }
+        .quiz-item { background: var(--card-bg); padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; }
+        .quiz-question { font-weight: 600; margin-bottom: 1rem; }
+        .quiz-options { display: flex; flex-direction: column; gap: 0.5rem; }
+        .quiz-btn { text-align: left; padding: 0.75rem 1rem; background: white; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-family: var(--font-body); transition: background 0.2s; }
+        .quiz-btn.correct { background: #d5e0ca; border-color: #8b9c7a; }
+        .quiz-btn.incorrect { background: #e0caca; border-color: #9c7a7a; }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="app" style="display:none;">
+        <header class="header">
+            <div class="header-top">
+                <span>TECHKNOTS > ROCKY'S LAB</span>
+                <span class="badge">LIVE SESSION CONSOLE</span>
+            </div>
+            <h1>Cybersecurity with AI</h1>
+            <p class="subtitle">Defending Against Modern Cyber Attacks — a 3-hour interactive lab session.</p>
+        </header>
+
+        <!-- Mission Clock Panel -->
+        <div class="clock-panel">
+            <div class="clock-top">
+                <div class="time-display" id="clock-display" title="Click to edit time" onclick="promptEditTime()">00:00:00</div>
+                <div class="current-phase" id="current-phase-label">WELCOME & HOOK</div>
+                <div class="clock-controls">
+                    <button class="btn btn-primary" id="btn-start" onclick="toggleTimer()">START SESSION</button>
+                    <button class="btn btn-outline-dark" id="btn-pause" onclick="pauseTimer()">PAUSE</button>
+                    <button class="btn btn-outline-dark" id="btn-reset" onclick="resetTimer()">RESET</button>
+                </div>
+            </div>
+            <div class="timeline" id="timeline"></div>
+        </div>
+
+        <!-- Team Strip -->
+        <div class="team-strip">
+            <div class="team-strip-label">ACTIVE TEAM</div>
+            <div class="team-chips" id="team-chips"></div>
+            <button class="btn btn-outline leaderboard-btn" onclick="toggleLeaderboard()" style="background: white;">LEADERBOARD ▾</button>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="tabs" id="tabs-nav"></div>
+
+        <div class="main-content">
+            <!-- Tab Contents will be rendered here dynamically -->
+            <div class="tab-content" id="tab-mod1"></div>
+            <div class="tab-content" id="tab-lab1"></div>
+            <div class="tab-content" id="tab-lab2"></div>
+            <div class="tab-content" id="tab-lab3"></div>
+            <div class="tab-content" id="tab-lab4"></div>
+            <div class="tab-content" id="tab-quiz"></div>
+        </div>
+    </div>
+    
+    <!-- Leaderboard Sidebar -->
+    <div class="leaderboard-overlay" id="leaderboard-overlay" onclick="if(event.target===this) toggleLeaderboard()">
+        <div class="leaderboard-sidebar">
+            <div class="leaderboard-header">
+                <h2>Leaderboard</h2>
+                <button class="btn btn-outline" onclick="toggleLeaderboard()" style="background:white;">CLOSE</button>
+            </div>
+            <div id="leaderboard-list"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    
+    <div id="loading" style="text-align:center; padding:5rem; font-family:monospace;">Connecting to supabaseClient... Please ensure you setup supabase-config.js</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        // --- State ---
+        let activeTeamId = 1;
+        let timerSecs = 0;
+        let timerInterval = null;
+        let isRunning = false;
+        let activeTab = 'mod1';
+        let gandalfLevel = 0;
+
+        let db = {
+            teams: [], schedule: [], board_items: [], mails: [], clips: [], stations: [], quiz: []
+        };
+        
+        let bc = null; // Broadcast channel
+
+        async function init() {
+            if (!supabaseClient) return;
+            
+            // Fetch initial data
+            try {
+                const res = await Promise.all([
+                    supabaseClient.from('teams').select('*').order('id'),
+                    supabaseClient.from('schedule').select('*'),
+                    supabaseClient.from('board_items').select('*').order('id'),
+                    supabaseClient.from('mails').select('*').order('id'),
+                    supabaseClient.from('clips').select('*').order('id'),
+                    supabaseClient.from('stations').select('*').order('id'),
+                    supabaseClient.from('quiz_questions').select('*').order('id'),
+                    supabaseClient.from('session_state').select('*').maybeSingle()
+                ]);
+                
+                // Check if any of the requests failed
+                for (let i = 0; i < res.length; i++) {
+                    if (res[i].error) throw res[i].error;
+                }
+                
+                db.teams = res[0].data || [];
+                db.schedule = res[1].data || [];
+                db.board_items = res[2].data || [];
+                db.mails = res[3].data || [];
+                db.clips = res[4].data || [];
+                db.stations = res[5].data || [];
+                db.quiz = res[6].data || [];
+                
+                const state = res[7].data || { timer_secs: 0, is_running: false, active_tab: 'mod1' };
+                
+                // Recover timer from local storage if it's more recent
+                const localTime = parseInt(localStorage.getItem('timerSecs'));
+                timerSecs = (localTime && localTime > state.timer_secs) ? localTime : state.timer_secs;
+                activeTab = state.active_tab;
+            } catch (err) {
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: red; max-width: 600px; margin: 0 auto; text-align: left;">
+                        <h3>Failed to load data from Supabase</h3>
+                        <p>Error: ${err.message || JSON.stringify(err)}</p>
+                        <br>
+                        <p><strong>Possible reasons:</strong></p>
+                        <ul style="padding-left: 20px;">
+                            <li>Did you run the <code>schema.sql</code> script in your Supabase SQL Editor?</li>
+                            <li>Is your Supabase Anon Key correct? (It should start with <code>eyJ...</code>)</li>
+                        </ul>
+                    </div>
+                `;
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+
+            renderAll();
+            
+            // Set up Realtime
+            bc = supabaseClient.channel('session_room');
+            bc.on('broadcast', { event: 'state_sync' }, payload => {
+                // Not strictly needed for facilitator as they are the master, but good for multi-facilitator
+            }).subscribe();
+            
+            // Postgres Changes for Auto Grading
+            supabaseClient.channel('db-changes')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'answers' }, handleStudentAnswer)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, payload => {
+                    const idx = db.teams.findIndex(t => t.id === payload.new.id);
+                    if(idx > -1) db.teams[idx] = payload.new;
+                    renderTeams();
+                    updateLeaderboard();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'board_items' }, payload => {
+                    const idx = db.board_items.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.board_items[idx] = payload.new;
+                    renderBoard();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mails' }, payload => {
+                    const idx = db.mails.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.mails[idx] = payload.new;
+                    renderPhishing();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clips' }, payload => {
+                    const idx = db.clips.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.clips[idx] = payload.new;
+                    renderDeepfakes();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stations' }, payload => {
+                    const idx = db.stations.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.stations[idx] = payload.new;
+                    renderStations();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quiz_questions' }, payload => {
+                    const idx = db.quiz.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.quiz[idx] = payload.new;
+                    renderQuiz();
+                })
+                .subscribe();
+                
+            // Ensure timer starts if it was running
+            if(state.is_running) toggleTimer(true);
+        }
+
+        async function handleStudentAnswer(payload) {
+            const ans = payload.new; // {team_id, module, question_id, answer}
+            
+            // Auto grade
+            let correct = false;
+            let pts = 0;
+            
+            if(ans.module === 'lab1') {
+                const m = db.mails.find(x => x.label === ans.question_id && x.team_id === ans.team_id);
+                if(m && m.correct === ans.answer) { correct = true; pts = 2; }
+            } else if (ans.module === 'lab3') {
+                const c = db.clips.find(x => x.label === ans.question_id);
+                if(c && c.correct === ans.answer) { correct = true; pts = 2; }
+            } else if (ans.module === 'quiz') {
+                const q = db.quiz.find(x => `Q${x.id}` === ans.question_id);
+                if(q && q.answer.toString() === ans.answer) { correct = true; pts = 1; }
+            }
+            
+            if(correct) {
+                // Award points via RPC or UPDATE
+                const team = db.teams.find(t => t.id === ans.team_id);
+                await supabaseClient.from('teams').update({ score: team.score + pts }).eq('id', ans.team_id);
+                showToast(`Team ${ans.team_id} answered correctly! (+${pts} pts)`);
+            } else {
+                showToast(`Team ${ans.team_id} submitted an incorrect answer.`);
+            }
+        }
+
+        function renderAll() {
+            renderTabsNav();
+            renderTimeline();
+            renderTeams();
+            updateLeaderboard();
+            renderBoard();
+            renderPhishing();
+            renderLab2();
+            renderDeepfakes();
+            renderStations();
+            renderQuiz();
+            
+            // Switch to active tab
+            switchTab(activeTab);
+            updateClockDisplay();
+        }
+        
+        function renderTabsNav() {
+            const tabs = ['mod1', 'lab1', 'lab2', 'lab3', 'lab4', 'quiz'];
+            const names = ['Mod 1', 'Lab 1', 'Lab 2', 'Lab 3', 'Lab 4', 'Quiz'];
+            document.getElementById('tabs-nav').innerHTML = tabs.map((t, i) => `
+                <button class="tab-btn" id="btn-tab-${t}" onclick="switchTab('${t}')">${names[i]}</button>
+            `).join('');
+        }
+
+        // --- Timer Functions ---
+        function formatTime(secs) {
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s = secs % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        const TOTAL_SESSION_SECS = 3 * 3600; // 3 hours
+
+        function updateClockDisplay() {
+            // Visual countdown from 3 hours
+            const remaining = Math.max(0, TOTAL_SESSION_SECS - timerSecs);
+            document.getElementById('clock-display').innerText = formatTime(remaining);
+            updateTimelineHighlight();
+        }
+
+        let timerStartTimestamp = null;
+        let initialTimerSecs = 0;
+
+        async function toggleTimer(forceRunning = false) {
+            if (!isRunning || forceRunning) {
+                initialTimerSecs = timerSecs;
+                timerStartTimestamp = Date.now();
+                
+                timerInterval = setInterval(async () => {
+                    const now = Date.now();
+                    const deltaSecs = Math.floor((now - timerStartTimestamp) / 1000);
+                    
+                    // Only run DB update/broadcast if the second actually ticked over
+                    if (timerSecs !== initialTimerSecs + deltaSecs) {
+                        timerSecs = initialTimerSecs + deltaSecs;
+                        localStorage.setItem('timerSecs', timerSecs);
+                        updateClockDisplay();
+                        
+                        if(bc) bc.send({ type: 'broadcast', event: 'state_sync', payload: { timerSecs, activeTab } });
+                        
+                        if (timerSecs % 15 === 0) {
+                            await supabaseClient.from('session_state').update({ timer_secs: timerSecs }).eq('id', 1);
+                        }
+                    }
+                }, 200); // Check more frequently than 1s to stay visually smooth
+                isRunning = true;
+                document.getElementById('btn-start').innerText = 'RUNNING...';
+                document.getElementById('btn-start').disabled = true;
+                await supabaseClient.from('session_state').update({ is_running: true }).eq('id', 1);
+            }
+        }
+        
+        async function pauseTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                document.getElementById('btn-start').innerText = 'RESUME';
+                document.getElementById('btn-start').disabled = false;
+                await supabaseClient.from('session_state').update({ is_running: false, timer_secs: timerSecs }).eq('id', 1);
+            }
+        }
+        
+        async function resetTimer() {
+            pauseTimer();
+            timerSecs = 0;
+            updateClockDisplay();
+            document.getElementById('btn-start').innerText = 'START SESSION';
+            await supabaseClient.from('session_state').update({ timer_secs: 0 }).eq('id', 1);
+        }
+        
+        async function promptEditTime() {
+            const input = prompt("Enter new time in MM or HH:MM format:", Math.floor(timerSecs / 60));
+            if (input !== null && input.trim() !== "") {
+                let parts = input.split(':').map(Number);
+                if (parts.length === 1 && !isNaN(parts[0])) {
+                    timerSecs = parts[0] * 60;
+                } else if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    timerSecs = parts[0] * 3600 + parts[1] * 60;
+                }
+                updateClockDisplay();
+                await supabaseClient.from('session_state').update({ timer_secs: timerSecs }).eq('id', 1);
+            }
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timeline');
+            container.innerHTML = db.schedule.map((seg, idx) => `
+                <div class="timeline-segment" id="seg-${idx}" onclick="jumpToSegment(${idx})">
+                    <div class="segment-time">${seg.time_str}</div>
+                    <div>${seg.title}</div>
+                </div>
+            `).join('');
+            updateTimelineHighlight();
+        }
+
+        function updateTimelineHighlight() {
+            let activeIdx = 0;
+            for (let i = 0; i < db.schedule.length; i++) {
+                if (timerSecs >= db.schedule[i].start_sec) activeIdx = i;
+            }
+            if(db.schedule.length > 0) {
+                document.getElementById('current-phase-label').innerText = db.schedule[activeIdx].title;
+                db.schedule.forEach((_, idx) => {
+                    const el = document.getElementById(`seg-${idx}`);
+                    if(el) {
+                        el.classList.remove('active', 'done');
+                        if (idx < activeIdx) el.classList.add('done');
+                        else if (idx === activeIdx) el.classList.add('active');
+                    }
+                });
+            }
+        }
+        
+        async function jumpToSegment(idx) {
+            const seg = db.schedule[idx];
+            if (!confirm(`Jump the mission clock to the start of '${seg.title}'?`)) return;
+            
+            timerSecs = seg.start_sec;
+            initialTimerSecs = timerSecs;
+            timerStartTimestamp = Date.now();
+            updateClockDisplay();
+            await supabaseClient.from('session_state').update({ timer_secs: timerSecs }).eq('id', 1);
+        }
+
+        function renderTeams() {
+            const container = document.getElementById('team-chips');
+            container.innerHTML = db.teams.map(team => `
+                <button class="chip ${team.id === activeTeamId ? 'active' : ''}" onclick="setActiveTeam(${team.id})">
+                    ${team.name} <span class="chip-score">${team.score}</span>
+                </button>
+            `).join('');
+        }
+
+        function setActiveTeam(id) {
+            activeTeamId = id;
+            renderTeams();
+        }
+
+        async function awardPoints(points, reason) {
+            const team = db.teams.find(t => t.id === activeTeamId);
+            await supabaseClient.from('teams').update({ score: team.score + points }).eq('id', activeTeamId);
+            showToast(`${points > 0 ? '+' : ''}${points} pts → ${team.name} (now ${team.score + points}) - ${reason}`);
+        }
+
+        function toggleLeaderboard() {
+            document.getElementById('leaderboard-overlay').classList.toggle('active');
+        }
+
+        function updateLeaderboard() {
+            if(db.teams.length === 0) return;
+            const sorted = [...db.teams].sort((a, b) => b.score - a.score);
+            const maxScore = Math.max(10, sorted[0].score); 
+            
+            const container = document.getElementById('leaderboard-list');
+            container.innerHTML = sorted.map((team, idx) => `
+                <div class="team-rank-item">
+                    <div class="rank-num">${idx + 1}</div>
+                    <div class="rank-bar-container">
+                        <div class="rank-team-name">${team.name}</div>
+                        <div class="rank-bar" style="width: ${(team.score / maxScore) * 100}%"></div>
+                    </div>
+                    <div class="rank-score">${team.score}</div>
+                </div>
+            `).join('');
+        }
+
+        async function switchTab(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            const btn = document.getElementById(`btn-tab-${tabId}`);
+            if(btn) btn.classList.add('active');
+            
+            const content = document.getElementById(`tab-${tabId}`);
+            if(content) content.classList.add('active');
+            
+            await supabaseClient.from('session_state').update({ active_tab: tabId }).eq('id', 1);
+            if(bc) bc.send({ type: 'broadcast', event: 'state_sync', payload: { timerSecs, activeTab } });
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // -- MODULES UI RENDERING --
+        function renderBoard() {
+            const lists = { attack: '', defense: '', unsorted: '' };
+            let counts = { attack: 0, defense: 0, unsorted: 0 };
+            
+            db.board_items.forEach(item => {
+                counts[item.status]++;
+                let actions = item.status === 'unsorted' ? `
+                    <div class="board-actions">
+                        <button onclick="sortBoardItem(${item.id}, 'A')">A</button>
+                        <button onclick="sortBoardItem(${item.id}, 'D')">D</button>
+                    </div>` : '';
+                lists[item.status] += `<div class="board-item"><span>${item.text}</span>${actions}</div>`;
+            });
+            
+            const html = `
+                <div class="section-header">
+                    <div class="section-label">MODULE 1</div>
+                    <h2 class="section-title">AI in Cybersecurity — Attack vs Defense</h2>
+                </div>
+                <div class="board-container">
+                    <div class="board-column"><div class="board-col-header"><span>Attack</span><span>${counts.attack}</span></div>${lists.attack}</div>
+                    <div class="board-column"><div class="board-col-header"><span>Defense</span><span>${counts.defense}</span></div>${lists.defense}</div>
+                    <div class="board-column"><div class="board-col-header"><span>Unsorted</span><span>${counts.unsorted}</span></div>${lists.unsorted}</div>
+                </div>
+            `;
+            document.getElementById('tab-mod1').innerHTML = html;
+        }
+
+        async function sortBoardItem(id, guess) {
+            const item = db.board_items.find(i => i.id === id);
+            const isCorrect = item.correct === guess;
+            const newStatus = item.correct === 'A' ? 'attack' : 'defense';
+            
+            await supabaseClient.from('board_items').update({ status: newStatus }).eq('id', id);
+            
+            if (isCorrect) awardPoints(2, 'Correct board sort');
+            else showToast(`Incorrect! It was ${item.correct === 'A' ? 'Attack' : 'Defense'}.`);
+        }
+
+        function renderPhishing() {
+            const cards = db.mails.filter(m => m.team_id === 0).map(m => `
+                <div class="card">
+                    <div class="card-header"><span>Sample ${m.label}</span></div>
+                    <div class="card-body"><div style="font-weight: 600; margin-bottom: 0.5rem;">${m.sender}</div><p>${m.body}</p></div>
+                    <div class="card-actions">
+                        ${m.answered ? `<div style="text-align: center; width: 100%; font-weight: bold; padding: 0.5rem; background: ${m.correct === 'PHISHING' ? '#e0caca' : '#cae0cb'}; border-radius: 4px;">ACTUAL: ${m.correct}</div>` 
+                        : `<button class="btn btn-outline" onclick="revealPhishing(${m.id})">Reveal Answer</button>`}
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('tab-lab1').innerHTML = `
+                <div class="section-header"><div class="section-label">LAB 1</div><h2 class="section-title">AI-Powered Phishing</h2></div>
+                <div class="grid-3">${cards}</div>
+            `;
+        }
+
+        async function revealPhishing(id) {
+            await supabaseClient.from('mails').update({ answered: true }).eq('id', id);
+        }
+        
+        function renderLab2() {
+            document.getElementById('tab-lab2').innerHTML = `
+                <div class="section-header"><div class="section-label">LAB 2</div><h2 class="section-title">Prompt Injection (Gandalf)</h2></div>
+                <div class="card" style="max-width: 400px; background: var(--card-bg);">
+                    <div style="font-family: var(--font-mono); margin-bottom: 1rem; color: var(--text-secondary)">Levels Cleared</div>
+                    <div id="gandalf-level" style="font-size:3rem; font-family: var(--font-mono); font-weight:600; margin-bottom: 1.5rem;">${gandalfLevel}</div>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <button class="btn btn-outline" style="flex:1; background:white;" onclick="changeGandalfLevel(-1)">- 1</button>
+                        <button class="btn btn-outline" style="flex:1; background:white;" onclick="changeGandalfLevel(1)">+ 1</button>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%" onclick="logGandalfScore()">LOG SCORE</button>
+                </div>
+            `;
+        }
+
+        function changeGandalfLevel(delta) {
+            gandalfLevel = Math.max(0, gandalfLevel + delta);
+            renderLab2();
+        }
+        
+        function logGandalfScore() {
+            if (gandalfLevel > 0) {
+                awardPoints(gandalfLevel, `Gandalf levels`);
+                gandalfLevel = 0;
+                renderLab2();
+            }
+        }
+
+        function renderDeepfakes() {
+            const cards = db.clips.map(c => `
+                <div class="card">
+                    <div class="card-header"><span>${c.label}</span></div>
+                    <div class="card-body"><div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">${c.title}</div><p style="color: var(--text-secondary); margin-bottom: 1rem;">Play clip externally.</p>
+                        ${c.answered ? `<div style="padding: 1rem; background: #fff; border: 1px solid var(--border-color); border-radius: 4px;"><strong style="color: ${c.correct === 'REAL' ? 'green' : 'red'};">${c.correct}</strong><br><span style="font-size: 0.9rem;">${c.explanation}</span></div>` 
+                        : `<div class="card-actions"><button class="btn btn-outline" onclick="revealDeepfake(${c.id})">Reveal Answer</button></div>`}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('tab-lab3').innerHTML = `<div class="section-header"><div class="section-label">LAB 3</div><h2 class="section-title">Deepfake Detection</h2></div><div class="grid-2">${cards}</div>`;
+        }
+
+        async function revealDeepfake(id) {
+            await supabaseClient.from('clips').update({ answered: true }).eq('id', id);
+        }
+
+        function renderStations() {
+            const cards = db.stations.map(s => `
+                <div class="card" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 1rem 1.5rem;">
+                    <span style="font-weight: 500;">${s.name}</span>
+                    <button class="btn ${s.is_active ? 'btn-primary' : 'btn-outline'}" style="${!s.is_active ? 'background: white;' : ''}" onclick="toggleStation(${s.id})">${s.is_active ? 'REVOKE -1' : 'AWARD +1'}</button>
+                </div>
+            `).join('');
+            document.getElementById('tab-lab4').innerHTML = `<div class="section-header"><div class="section-label">LAB 4</div><h2 class="section-title">Defensive Tools</h2></div><div class="grid-2">${cards}</div>`;
+        }
+
+        async function toggleStation(id) {
+            const s = db.stations.find(x => x.id === id);
+            const newState = !s.is_active;
+            await supabaseClient.from('stations').update({ is_active: newState }).eq('id', id);
+            if(newState) awardPoints(1, `Station: ${s.name}`);
+            else awardPoints(-1, `Revoked: ${s.name}`);
+        }
+
+        function renderQuiz() {
+            const items = db.quiz.map(q => {
+                const options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+                return `
+                <div class="quiz-item">
+                    <div class="quiz-question">${q.id}. ${q.text}</div>
+                    <div class="quiz-options">
+                        ${options.map((opt, oIdx) => {
+                            let cls = 'quiz-btn';
+                            if (q.answered) { if (oIdx === q.answer) cls += ' correct'; else cls += ' incorrect'; }
+                            return `<button class="${cls}" ${q.answered ? 'disabled' : `onclick="manualAnswerQuiz(${q.id}, ${oIdx})"`}>${opt}</button>`;
+                        }).join('')}
+                    </div>
+                    ${!q.answered ? `<button class="btn btn-primary" style="margin-top: 1rem;" onclick="revealQuiz(${q.id})">Reveal Answer</button>` : ''}
+                </div>`;
+            }).join('');
+            document.getElementById('tab-quiz').innerHTML = `<div class="section-header"><div class="section-label">QUIZ</div><h2 class="section-title">Closing Quiz</h2></div><div class="grid-2">${items}</div>`;
+        }
+        
+        async function manualAnswerQuiz(qId, selectedIdx) {
+            const q = db.quiz.find(x => x.id === qId);
+            await supabaseClient.from('quiz_questions').update({ answered: true }).eq('id', qId);
+            if(q.answer === selectedIdx) awardPoints(1, 'Correct Quiz Answer (Manual)');
+            else showToast('Incorrect Quiz Answer (Manual)');
+        }
+
+        async function revealQuiz(qId) {
+            await supabaseClient.from('quiz_questions').update({ answered: true }).eq('id', qId);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

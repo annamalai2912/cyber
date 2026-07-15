@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student View - Live Session</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f1ebd9;
+            --text-primary: #1a1a1a;
+            --text-secondary: #5a5a5a;
+            --panel-bg: #212320;
+            --panel-text: #e8e8e8;
+            --border-color: #d2cdbe;
+            --card-bg: #e6e0cc;
+            
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'IBM Plex Sans', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-body); background-color: var(--bg-color); color: var(--text-primary); padding: 1.5rem; line-height: 1.5; min-height:100vh;}
+        
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { font-family: var(--font-display); font-size: 2rem; margin-bottom: 1rem; }
+        
+        .btn { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 500; padding: 0.8rem 1.2rem; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-color); width: 100%; margin-bottom: 0.5rem; background: white; text-transform: uppercase; transition: all 0.2s;}
+        .btn:hover:not(:disabled) { background: #f0f0f0; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--panel-bg); color: var(--panel-text); border: none; }
+        .btn-primary:hover:not(:disabled) { background: #333; }
+        
+        .screen { display: none; }
+        .screen.active { display: block; }
+        
+        .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem; }
+        
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; }
+        .card-header { font-family: var(--font-mono); font-size: 0.8rem; margin-bottom: 0.5rem; color: var(--text-secondary); }
+        .card-title { font-weight: 600; margin-bottom: 1rem; }
+        
+        #status-bar { position: sticky; top: 0; background: var(--panel-bg); color: var(--panel-text); padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; font-family: var(--font-mono); font-size: 0.8rem; display: flex; justify-content: space-between; z-index:10; }
+        
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #212320; color: #fff; padding: 0.75rem 1.5rem; border-radius: 8px; font-family: var(--font-mono); font-size: 0.8rem; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 100;}
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div id="loading" style="text-align:center; padding:5rem; font-family:monospace;">Connecting... Ensure supabase-config.js is setup.</div>
+
+    <div class="container" id="app" style="display:none;">
+        <!-- Join Screen -->
+        <div id="join-screen" class="screen active">
+            <h1>Join a Team</h1>
+            <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">Select the team you were assigned to.</p>
+            <div class="team-grid" id="team-grid"></div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen" class="screen">
+            <div id="status-bar">
+                <span id="my-team-label">Team X</span>
+                <span id="score-label" style="background:#fff; color:#000; padding:0 6px; border-radius:4px; font-weight:bold;">0 pts</span>
+            </div>
+            
+            <div id="dynamic-content">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        let myTeamId = null;
+        let myScore = 0;
+        let activeTab = 'mod1';
+        let db = { teams: [], mails: [], clips: [], quiz: [] };
+        let submittedAnswers = new Set(); // Local cache to disable buttons immediately
+
+        async function init() {
+            if (!supabaseClient) return;
+            
+            const res = await Promise.all([
+                supabaseClient.from('teams').select('*').order('id'),
+                supabaseClient.from('mails').select('*').order('id'),
+                supabaseClient.from('clips').select('*').order('id'),
+                supabaseClient.from('quiz_questions').select('*').order('id'),
+                supabaseClient.from('session_state').select('active_tab').maybeSingle()
+            ]);
+            
+            db.teams = res[0].data || [];
+            db.mails = res[1].data || [];
+            db.clips = res[2].data || [];
+            db.quiz = res[3].data || [];
+            if(res[4].data) activeTab = res[4].data.active_tab;
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+
+            // Check if student already joined a team previously
+            const savedTeam = localStorage.getItem('myTeamId');
+            if (savedTeam) {
+                // Wait a tiny bit for the UI to be ready
+                setTimeout(() => joinTeam(parseInt(savedTeam)), 100);
+            } else {
+                renderJoinScreen();
+            }
+            
+            // Listen for Realtime Broadcasts for Tab Switching
+            const bc = supabaseClient.channel('session_room');
+            bc.on('broadcast', { event: 'state_sync' }, payload => {
+                if (payload.payload.activeTab !== activeTab) {
+                    activeTab = payload.payload.activeTab;
+                    if(myTeamId) renderActiveTab();
+                }
+            }).subscribe();
+            
+            // Listen for Team score updates
+            supabaseClient.channel('my-team-updates')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, payload => {
+                    if (payload.new.id === myTeamId) {
+                        const diff = payload.new.score - myScore;
+                        myScore = payload.new.score;
+                        document.getElementById('score-label').innerText = `${myScore} pts`;
+                        if(diff > 0) showToast(`+${diff} points awarded!`);
+                    }
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mails' }, payload => {
+                    const idx = db.mails.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.mails[idx] = payload.new;
+                    if(activeTab === 'lab1') renderActiveTab();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clips' }, payload => {
+                    const idx = db.clips.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.clips[idx] = payload.new;
+                    if(activeTab === 'lab3') renderActiveTab();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quiz_questions' }, payload => {
+                    const idx = db.quiz.findIndex(i => i.id === payload.new.id);
+                    if(idx > -1) db.quiz[idx] = payload.new;
+                    if(activeTab === 'quiz') renderActiveTab();
+                })
+                .subscribe();
+        }
+
+        function renderJoinScreen() {
+            const grid = document.getElementById('team-grid');
+            grid.innerHTML = db.teams.map(t => `<button class="btn" onclick="joinTeam(${t.id})">${t.name}</button>`).join('');
+        }
+
+        async function joinTeam(id) {
+            myTeamId = id;
+            localStorage.setItem('myTeamId', id); // Save to local storage to persist on refresh
+            
+            const team = db.teams.find(t => t.id === id);
+            myScore = team.score;
+            
+            // Insert tracking record (optional, but requested in schema)
+            await supabaseClient.from('students').insert({ team_id: id });
+            
+            document.getElementById('join-screen').classList.remove('active');
+            document.getElementById('dashboard-screen').classList.add('active');
+            document.getElementById('my-team-label').innerText = team.name;
+            document.getElementById('score-label').innerText = `${myScore} pts`;
+            
+            // Fetch any previously submitted answers for this team to disable buttons
+            const { data } = await supabaseClient.from('answers').select('module, question_id').eq('team_id', myTeamId);
+            if(data) data.forEach(a => submittedAnswers.add(`${a.module}_${a.question_id}`));
+            
+            renderActiveTab();
+        }
+
+        function renderActiveTab() {
+            const container = document.getElementById('dynamic-content');
+            
+            if (activeTab === 'lab1') {
+                container.innerHTML = `
+                    <h2>AI-Powered Phishing</h2>
+                    <p style="margin-bottom:1rem; color:var(--text-secondary);">Vote on each sample shown on the main screen.</p>
+                    ${db.mails.filter(m => m.team_id === myTeamId).map(m => {
+                        const submitted = submittedAnswers.has(`lab1_${m.label}`);
+                        return `
+                        <div class="card">
+                            <div class="card-header">Sample ${m.label}</div>
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">From: ${m.sender}</div>
+                            <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--text-secondary); background: rgba(0,0,0,0.03); padding: 0.5rem; border-radius: 4px;">${m.body}</p>
+                            ${m.answered ? `<div style="padding:0.5rem; text-align:center; font-weight:bold; background:var(--border-color); border-radius:4px;">Answer Revealed on Projector</div>` : `
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitAnswer('lab1', '${m.label}', 'PHISHING')">PHISHING</button>
+                                <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitAnswer('lab1', '${m.label}', 'GENUINE')">GENUINE</button>
+                            </div>`}
+                        </div>`;
+                    }).join('')}
+                `;
+            } else if (activeTab === 'lab3') {
+                container.innerHTML = `
+                    <h2>Deepfake Detection</h2>
+                    <p style="margin-bottom:1rem; color:var(--text-secondary);">Vote Real or Fake for the clip playing.</p>
+                    ${db.clips.map(c => {
+                        const submitted = submittedAnswers.has(`lab3_${c.label}`);
+                        return `
+                        <div class="card">
+                            <div class="card-header">${c.label}</div>
+                            ${c.answered ? `<div style="padding:0.5rem; text-align:center; font-weight:bold; background:var(--border-color); border-radius:4px;">Answer Revealed on Projector</div>` : `
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitAnswer('lab3', '${c.label}', 'REAL')">REAL</button>
+                                <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitAnswer('lab3', '${c.label}', 'FAKE')">FAKE</button>
+                            </div>`}
+                        </div>`;
+                    }).join('')}
+                `;
+            } else if (activeTab === 'quiz') {
+                container.innerHTML = `
+                    <h2>Closing Quiz</h2>
+                    <p style="margin-bottom:1rem; color:var(--text-secondary);">Select the best answer for the question on screen.</p>
+                    ${db.quiz.map(q => {
+                        const submitted = submittedAnswers.has(`quiz_Q${q.id}`);
+                        const options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+                        return `
+                        <div class="card" style="padding: 1rem;">
+                            <div class="card-header">Question ${q.id}</div>
+                            ${q.answered ? `<div style="padding:0.5rem; text-align:center; font-weight:bold; background:var(--border-color); border-radius:4px;">Answer Revealed on Projector</div>` : `
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                                ${options.map((opt, idx) => `<button class="btn" style="margin:0;" ${submitted ? 'disabled' : ''} onclick="submitAnswer('quiz', 'Q${q.id}', '${idx}')">Opt ${idx+1}</button>`).join('')}
+                            </div>`}
+                        </div>`;
+                    }).join('')}
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="card" style="text-align: center; padding: 3rem 1rem;">
+                        <h3 style="margin-bottom:0.5rem;">Eyes on the main screen</h3>
+                        <p style="color:var(--text-secondary);">This activity requires your team to shout out or discuss with the facilitator.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function submitAnswer(module, qId, answer) {
+            const key = `${module}_${qId}`;
+            if(submittedAnswers.has(key)) return;
+            submittedAnswers.add(key);
+            
+            // Re-render to disable buttons instantly
+            renderActiveTab();
+            
+            await supabaseClient.from('answers').insert({
+                team_id: myTeamId,
+                module: module,
+                question_id: qId,
+                answer: answer
+            });
+            
+            showToast(`Answer submitted!`);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
