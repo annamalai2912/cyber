@@ -272,7 +272,8 @@
                         return `
                         <div class="card">
                             <div class="card-header">Sample ${m.label}</div>
-                            <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--text-secondary); background: rgba(0,0,0,0.03); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono);">${m.body}</p>
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">From: ${m.sender}</div>
+                            <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--text-secondary); background: rgba(0,0,0,0.03); padding: 0.5rem; border-radius: 4px;">${m.body}</p>
                             ${m.answered ? `<div style="padding:0.5rem; text-align:center; font-weight:bold; background:var(--border-color); border-radius:4px;">Answer Revealed on Projector</div>` : `
                             <div style="display:flex; gap:0.5rem;">
                                 <button class="btn" ${submitted ? 'disabled' : ''} onclick="submitAnswer('lab1', '${m.label}', 'PHISHING')">PHISHING</button>
