@@ -34,4 +34,5 @@ INSERT INTO mails (id, team_id, label, sender, body, correct, answered) VALUES
 (36, 11, 'E3', 'alert@aws-security-noreply.com', 'Unauthorized access detected on production S3 bucket. Click here to review the audit log and secure your account.', 'PHISHING', false),
 (37, 12, 'E1', 'admin@it-helpdesk-portal.com', 'ACTION REQUIRED: Your corporate VPN certificate expires today. Renew immediately at https://vpn-portal-update.com/cert.', 'PHISHING', false),
 (38, 12, 'E2', 'hr@techknots.in', 'Please find the attached Q3 performance review guidelines. No immediate action is required.', 'GENUINE', false),
-(39, 12, 'E3', 'alert@aws-security-noreply.com', 'Unauthorized access detected on production S3 bucket. Click here to review the audit log and secure your account.', 'PHISHING', false);
+(39, 12, 'E3', 'alert@aws-security-noreply.com', 'Unauthorized access detected on production S3 bucket. Click here to review the audit log and secure your account.', 'PHISHING', false)
+ON CONFLICT (id) DO NOTHING;

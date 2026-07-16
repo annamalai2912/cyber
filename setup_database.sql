@@ -305,6 +305,8 @@ ALTER TABLE materials DISABLE ROW LEVEL SECURITY;
 ALTER TABLE osint_tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_slides DISABLE ROW LEVEL SECURITY;
 
+
+
 -- 1. DISABLE RLS TEMPORARILY
 ALTER TABLE teams DISABLE ROW LEVEL SECURITY;
 ALTER TABLE students DISABLE ROW LEVEL SECURITY;
@@ -388,6 +390,8 @@ INSERT INTO teaching_slides (id, title, content, is_active) VALUES
 (4, 'Spotting Deepfakes in the Wild', 'Deepfakes use Generative Adversarial Networks (GANs) to map one person''s face/voice onto another. To detect them, look for biometric inconsistencies: unnatural blinking (or lack thereof), strange skin smoothing, distorted shadows, blurry hair textures, and audio/video desynchronization. Pay special attention to the edges of the face and the teeth, where AI models often struggle to render fine details.', false),
 (5, 'Defensive Tools Landscape', 'Defenders leverage AI and automation for Threat Intelligence. Tools like VirusTotal aggregate scanning engines to detect malware signatures. Shodan acts as a search engine for IoT devices to identify exposed ports. Any.Run provides interactive sandboxing to safely detonate malware. AI copilots in SOCs (like Microsoft Security Copilot) summarize complex logs into natural language, drastically reducing incident response times.', false)
 ON CONFLICT (id) DO NOTHING;
+
+
 INSERT INTO mails (id, team_id, label, sender, body, correct, answered) VALUES
 (4, 1, 'E1', 'admin@it-helpdesk-portal.com', 'ACTION REQUIRED: Your corporate VPN certificate expires today. Renew immediately at https://vpn-portal-update.com/cert.', 'PHISHING', false),
 (5, 1, 'E2', 'hr@techknots.in', 'Please find the attached Q3 performance review guidelines. No immediate action is required.', 'GENUINE', false),
@@ -424,4 +428,5 @@ INSERT INTO mails (id, team_id, label, sender, body, correct, answered) VALUES
 (36, 11, 'E3', 'alert@aws-security-noreply.com', 'Unauthorized access detected on production S3 bucket. Click here to review the audit log and secure your account.', 'PHISHING', false),
 (37, 12, 'E1', 'admin@it-helpdesk-portal.com', 'ACTION REQUIRED: Your corporate VPN certificate expires today. Renew immediately at https://vpn-portal-update.com/cert.', 'PHISHING', false),
 (38, 12, 'E2', 'hr@techknots.in', 'Please find the attached Q3 performance review guidelines. No immediate action is required.', 'GENUINE', false),
-(39, 12, 'E3', 'alert@aws-security-noreply.com', 'Unauthorized access detected on production S3 bucket. Click here to review the audit log and secure your account.', 'PHISHING', false);
+(39, 12, 'E3', 'alert@aws-security-noreply.com', 'Unauthorized access detected on production S3 bucket. Click here to review the audit log and secure your account.', 'PHISHING', false)
+ON CONFLICT (id) DO NOTHING;
