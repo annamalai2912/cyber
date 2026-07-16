@@ -420,22 +420,34 @@
         }
 
         function downloadNotes() {
-            let content = "Cybersecurity with AI - Session Notes\n";
-            content += "=====================================\n\n";
+            let content = "CYBERSECURITY & AI - COMPLETE MASTERCLASS NOTES\n";
+            content += "===============================================\n\n";
             
-            content += "## Teaching Notes\n";
-            db.teaching_slides.forEach(s => {
-                content += `- ${s.title}: ${s.content}\n`;
+            content += "MODULE 1: CORE CONCEPTS & TEACHING SLIDES\n";
+            content += "-----------------------------------------\n";
+            db.teaching_slides.forEach((s, idx) => {
+                content += `[Slide ${idx + 1}] ${s.title.toUpperCase()}\n`;
+                content += `${s.content}\n\n`;
+            });
+            
+            content += "MODULE 2: RECOMMENDED MATERIALS & ROADMAP\n";
+            content += "-----------------------------------------\n";
+            db.materials.forEach(m => {
+                content += `- ${m.title} (${m.type.toUpperCase()}): ${m.url}\n`;
             });
             content += "\n";
             
-            content += "## Tools Unlocked\n";
+            content += "MODULE 3: DEFENSIVE TOOL ARSENAL\n";
+            content += "-----------------------------------------\n";
             db.stations.forEach(s => {
-                if (s.is_active && s.url) {
+                if (s.url) {
                     content += `- ${s.name}: ${s.url}\n`;
                 }
             });
             content += "\n";
+            
+            content += "===============================================\n";
+            content += "End of Session Notes. Stay Safe Online!\n";
             
             const blob = new Blob([content], { type: "text/plain" });
             const url = URL.createObjectURL(blob);

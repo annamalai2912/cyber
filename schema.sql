@@ -273,9 +273,9 @@ INSERT INTO quiz_questions (id, text, options, answer, answered) VALUES
 
 -- Materials
 INSERT INTO materials (title, type, url, is_unlocked) VALUES
-('Defensive Tool Arsenal Guide', 'pdf', '#', false),
-('Incident Response Playbook', 'pdf', '#', false),
-('Cybersecurity Career Roadmap', 'roadmap', '#', false);
+('Defensive Tool Arsenal Guide', 'pdf', 'https://raw.githubusercontent.com/annamalai2912/cyber/main/public/arsenal_guide.pdf', true),
+('Incident Response Playbook', 'pdf', 'https://raw.githubusercontent.com/annamalai2912/cyber/main/public/ir_playbook.pdf', true),
+('Cybersecurity Career Roadmap', 'roadmap', 'https://roadmap.sh/cyber-security', true);
 
 -- OSINT Tasks
 INSERT INTO osint_tasks (id, title, description, hint, correct, pts, is_active) VALUES
